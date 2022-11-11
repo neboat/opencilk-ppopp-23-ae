@@ -1,0 +1,5 @@
+*~
+*.o
+*.csv
+__pycache__
+miniFE*.yaml
