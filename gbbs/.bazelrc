@@ -77,8 +77,8 @@ build:cilkplus --cxxopt=-DPARLAY_CILK
 build:cilkplus --cxxopt=-DPARLAY_CILKPLUS
 build:cilkplus --cxxopt=-fcilkplus
 build:cilkplus --linkopt=-fcilkplus
-build:cilkplus --linkopt=-L/data/work/tests/ppopp-23-ae/cilkrts/install/lib
-build:cilkplus --linkopt=-Wl,-rpath,/data/work/tests/ppopp-23-ae/cilkrts/install/lib
+build:cilkplus --linkopt=-L/opt/cilkrts/lib
+build:cilkplus --linkopt=-Wl,-rpath,/opt/cilkrts/lib
 
 build:verbose --cxxopt=-v
 build:verbose --linkopt=-v
@@ -104,7 +104,7 @@ build:cilkscale --cxxopt=-fcilktool=cilkscale
 build:cilkscale --linkopt=-fcilktool=cilkscale
 
 build:cilkscale_bitcode --cxxopt=-mllvm
-build:cilkscale_bitcode --cxxopt=-csi-tool-bitcode=/data/work/opencilk/build/lib/clang/14.0.6/lib/x86_64-unknown-linux-gnu/libcilkscale.bc
+build:cilkscale_bitcode --cxxopt=-csi-tool-bitcode=/opt/opencilk/lib/clang/14.0.6/lib/x86_64-unknown-linux-gnu/libcilkscale.bc
 
 # Build using OpenMP for parallelism.
 build:openmp --cxxopt=-UHOMEGROWN

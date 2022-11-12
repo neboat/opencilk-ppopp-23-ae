@@ -1,7 +1,7 @@
 CXX = clang++
 
 ifeq ($(CILKPLUS),1)
-	CILKPLUS_RTS = /data/work/tests/ppopp-23-ae/cilkrts/install
+	CILKPLUS_RTS = /opt/cilkrts
 	CILK_CFLAGS = -fcilkplus -I$(CILKPLUS_RTS)/include -DCILKPLUS
 	CILK_LDFLAGS = -fcilkplus -L$(CILKPLUS_RTS)/lib -Wl,-rpath,$(CILKPLUS_RTS)/lib
 else

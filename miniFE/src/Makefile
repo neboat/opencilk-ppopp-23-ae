@@ -14,9 +14,10 @@ ifeq ($(SERIAL),1)
 	EXTRA_CFLAGS += -DSERIAL
 	CILKFLAG =
 else ifeq ($(CILKPLUS),1)
-	EXTRA_CFLAGS += -DCILKPLUS -I/data/work/cilkrts/install/include
+	CILKPLUS_RTS=/opt/cilkrts
+	EXTRA_CFLAGS += -DCILKPLUS -I$(CILKPLUS_RTS)/include
 	CILKFLAG ?= -fcilkplus
-	EXTRA_LDFLAGS += -L/data/work/cilkrts/install/lib -Wl,-rpath,/data/work/cilkrts/install/lib
+	EXTRA_LDFLAGS += -L$(CILKPLUS_RTS)/lib -Wl,-rpath,$(CILKPLUS_RTS)/lib
 else
 	CILKFLAG ?= -fopencilk
 endif
@@ -38,8 +39,10 @@ LIBS=-ltcmalloc $(EXTRA_LDLIBS)
 # The MPICH_IGNORE_CXX_SEEK macro is required for some mpich versions,
 # such as the one on my cygwin machine.
 
-MPICC=/usr/lib64/openmpi/bin/mpicc
-MPICXX=/usr/lib64/openmpi/bin/mpic++
+# MPICC=/usr/lib64/openmpi/bin/mpicc
+# MPICXX=/usr/lib64/openmpi/bin/mpic++
+MPICC=mpicc
+MPICXX=mpic++
 
 #CXX=mpiicpc
 #CC=mpiicc

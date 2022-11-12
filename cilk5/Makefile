@@ -16,7 +16,8 @@ ifeq ($(SERIAL),1)
 endif
 
 ifeq ($(CILKPLUS),1)
-	CILKPLUS_RTS ?= /data/work/tests/ppopp-23-ae/cilkrts/install/
+	CILKPLUS_RTS ?= /opt/cilkrts
+	CFLAGS += -I$(CILKPLUS_RTS)/include
 	CILKFLAG = -fcilkplus
 	LDFLAGS = -L$(CILKPLUS_RTS)/lib -Wl,-rpath,$(CILKPLUS_RTS)/lib
 else

@@ -12,11 +12,10 @@ from runner import run, get_cpu_ordering, get_n_cpus
 
 logger = logging.getLogger(sys.argv[0])
 
-# opencilk_libdir = "/usr/local/lib/clang/14.0.6/lib/x86_64-unknown-linux-gnu/"
-opencilk_libdir = "/data/work/opencilk/build/lib/clang/14.0.6/lib/x86_64-unknown-linux-gnu/"
+opencilk_libdir = "/opt/opencilk/lib/clang/14.0.6/lib/x86_64-unknown-linux-gnu/"
 top_dir = os.getcwd()
-cilkrts_dir = os.path.join(top_dir,"cilkrts/install")
-compiler_bin_dir = "/data/work/opencilk/build/bin/"
+cilkrts_dir = "/opt/cilkrts"
+compiler_bin_dir = "/opt/opencilk/bin/"
 rawdata_dir = "./rawdata"
 
 ###########################################################################
@@ -162,7 +161,7 @@ def set_bazel_sysconfig(sys):
     match sys:
         case "opencilk": return "--config=cilk"
         case "cilkplus":
-            os.environ['CPLUS_INCLUDE_PATH'] = os.path.join(cilkrts_dir,"/include")
+            os.environ['CPLUS_INCLUDE_PATH'] = os.path.join(cilkrts_dir,"include")
             return "--config=cilkplus"
         case "serial": return "--config=serial"
         case _: raise ValueError("Unrecognized system "+sys)
@@ -294,7 +293,10 @@ def combine_keys(accum_data, new_key, keys, prog_run, sys_run, cpu_counts):
 
                 for c in fix_cpu_counts(sys, cpu_counts).split(','):
                     # Copy data from the old key to the new key.
-                    accum_data[new_key][(prog, new_sys, c)] = accum_data[key][(prog, sys, c)]
+                    if (prog, sys, c) in accum_data[key]:
+                        accum_data[new_key][(prog, new_sys, c)] = accum_data[key][(prog, sys, c)]
+                    else:
+                        accum_data[new_key][(prog, new_sys, c)] = ''
 
 ###########################################################################
 ## Cilk-5 benchmark handling (cilk5 subdirectory)
@@ -637,8 +639,6 @@ def build_randbench(sys):
 
 def parse_randbench_name(prog):
     m = re.match(r"([a-zA-Z0-9]+)_([a-zA-Z0-9]+)", prog)
-    print(m.group(1))
-    print(m.group(2))
     if m.group(2) == "pedigree":
         return (m.group(1),"dotmix")
     elif m.group(2) == "dprand":
@@ -846,7 +846,11 @@ def main():
     # print(all_prog_run)
     # print(all_sys_run)
 
-    have_all_cilkscale_results = 'cilkscale' in experiments and 'cilkscale-bitcode' in experiments
+    have_all_cilkscale_results = \
+        'cilkscale' in experiments and \
+        'cilkscale-bitcode' in experiments and \
+        'cilkscale' in accum_data and accum_data['cilkscale'] and \
+        'cilkscale-bitcode' in accum_data and accum_data['cilkscale-bitcode']
     for exp in experiments:
         # We will separately combine the results of the Cilkscale
         # experiments, so don't generate CSVs of their results here.
@@ -854,7 +858,7 @@ def main():
             continue
 
         # Write a CSV of the experiment's results.
-        if accum_data[exp]:
+        if exp in accum_data and accum_data[exp]:
             accum_csv = '-'.join([exp,csv_tag])+".csv"
             write_accumulated_results(accum_csv, accum_data[exp], all_prog_run[exp],
                                       all_sys_run[exp], cpu_counts)
@@ -876,7 +880,13 @@ def main():
     # the baseline runtime performance and the performance of OpenCilk
     # with pedigrees enabled.  This CSV was _not_ included as its own
     # figure in the paper.
-    # if 'baseline' in experiments and 'pedigrees' in experiments:
+
+    # have_baseline_and_pedigress = \
+    #     'baseline' in experiments and \
+    #     'pedigrees' in experiments and \
+    #     'baseline' in accum_data and accum_data['baseline'] and \
+    #     'pedigrees' in accum_data and accum_data['pedigrees']
+    # if have_baseline_and_pedigress:
     #     # Combine the results of the baseline and pedigrees experiments.
     #     combined_key = 'pedigrees-compare'
     #     combine_keys(accum_data, combined_key, ['baseline','pedigrees'],
