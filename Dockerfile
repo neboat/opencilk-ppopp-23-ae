@@ -27,16 +27,15 @@ RUN echo "Installing packages..." \
     libopenmpi-dev \
     > /dev/null \
   && echo "Installing Bazel..." \
-  && apt install apt-transport-https curl gnupg \
+  && apt-get install -qqy apt-transport-https curl gnupg ca-certificates > /dev/null \
   && curl -fsSL https://bazel.build/bazel-release.pub.gpg | gpg --dearmor >bazel-archive-keyring.gpg \
   && mv bazel-archive-keyring.gpg /usr/share/keyrings \
   && echo "deb [arch=amd64 signed-by=/usr/share/keyrings/bazel-archive-keyring.gpg] https://storage.googleapis.com/bazel-apt stable jdk1.8" | tee /etc/apt/sources.list.d/bazel.list \
-  && apt update -qq > /dev/null \
-  && apt install -qqy --no-install-recommends bazel \
+  && apt-get update -qq > /dev/null \
+  && apt-get install -qqy --no-install-recommends bazel > /dev/null \
   && echo "Building OpenCilk..." \
   && tar -C /usr/local/src -xzf /usr/local/src/opencilk.tar.gz \
-  && mkdir -p /usr/local/src/opencilk/build \
-  && /usr/local/src/ppopp-23-ae/build-opencilk /usr/local/src/opencilk/opencilk-project \
+  && /usr/local/src/ppopp-23-ae/build-opencilk /usr/local/src/opencilk \
     /usr/local/src/opencilk/build \
   && echo "Building CilkRTS..." \
   && /usr/local/src/ppopp-23-ae/build-cilkrts /usr/local/src/ppopp-23-ae/cilkrts \
