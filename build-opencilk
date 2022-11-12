@@ -1,0 +1,79 @@
+#!/bin/sh
+
+# Source directory for OpenCilk (root of the opencilk-project repository tree).
+# Must be an absolute pathname.
+case "$1" in
+    /*) OPENCILK_SOURCE="$1";;
+    -h|-help|--help) echo "USAGE: build source-dir build-dir [core-count]"; exit 1;;
+    -*) echo "unknown option $1"; exit 1;;
+    *) echo "First argument ($1) must be absolute pathname"; exit 1;;
+esac
+
+# Build directory for OpenCilk.  Must be an absolute pathname.  The Cheetah
+# runtime has to be built in its source directory, which should be a
+# sub-directory named "cheetah" within the OpenCilk source directory.
+# Similarly, the OpenCilk productivity tools source should be in a sub-directory
+# named "cilktools" within the OpenCilk source directory.
+case "$2" in
+    /*) BUILD_DIR="$2";;
+    *) echo "Second argument ($2) must be absolute pathname"; exit 1;;
+esac
+
+DEFAULT_NCPU=1
+NCPU="${3}"
+if test -z "${NCPU}" -a -r /proc/cpuinfo ; then
+    NCPU=$(grep -c '^processor' /proc/cpuinfo 2> /dev/null)
+fi
+if test -z "${NCPU}" ; then
+    if test -x /sbin/sysctl -o -x /usr/sbin/sysctl ; then
+    NCPU=$(PATH=${PATH}:/sbin:/usr/sbin sysctl -n hw.ncpu)
+    fi
+fi
+if test -z "${NCPU}" -o 0 -eq "${NCPU}" ; then
+    echo "Unknown CPU count; using ${DEFAULT_NCPU}"
+    NCPU=${DEFAULT_NCPU}
+fi
+
+if ! test -d "${OPENCILK_SOURCE}" ; then
+    echo "OpenCilk source tree ${OPENCILK_SOURCE} does not exist" 1>&2
+    exit 1
+fi
+
+CHEETAH_SOURCE="${OPENCILK_SOURCE:?}/cheetah"
+CILKTOOLS_SOURCE="${OPENCILK_SOURCE:?}/cilktools"
+
+exec < /dev/null
+
+echo "Building with ${NCPU:?} parallel jobs"
+
+if ! test -d "${OPENCILK_SOURCE}/llvm" ; then
+    echo "LLVM not found at ${OPENCILK_SOURCE}/llvm" 1>&2
+    exit 1
+fi
+if ! test -d "${CHEETAH_SOURCE}/runtime" ; then
+    echo "Cheetah runtime source not found at ${CHEETAH_SOURCE}/runtime" 1>&2
+    exit 1
+fi
+if ! test -d "${CILKTOOLS_SOURCE}" ; then
+    echo "OpenCilk productivity tools source not found at ${CILKTOOLS_SOURCE}" 1>&2
+    exit 1
+fi
+
+set -ex
+
+mkdir -p "${BUILD_DIR}"
+
+cd "${BUILD_DIR}"
+
+cmake -DCMAKE_BUILD_TYPE=Release \
+      -DCMAKE_C_COMPILER=clang \
+      -DCMAKE_CXX_COMPILER=clang++ \
+      -DLLVM_ENABLE_LLD=On \
+      -DLLVM_TARGETS_TO_BUILD=host \
+      -DLLVM_ENABLE_PROJECTS="clang;compiler-rt" \
+      -DLLVM_ENABLE_RUNTIMES="cheetah;cilktools" \
+      -DCMAKE_INSTALL_PREFIX="/opt/opencilk" \
+      "${OPENCILK_SOURCE}/llvm"
+
+cmake --build . -j"${NCPU}"
+cmake --build . --target install

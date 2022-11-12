@@ -1,0 +1,55 @@
+#!/bin/sh
+
+# Source directory for Cilk Plus RTS.
+# Must be an absolute pathname.
+case "$1" in
+    /*) CILKRTS_SOURCE="$1";;
+    -h|-help|--help) echo "USAGE: build source-dir build-dir [core-count]"; exit 1;;
+    -*) echo "unknown option $1"; exit 1;;
+    *) echo "First argument ($1) must be absolute pathname"; exit 1;;
+esac
+
+# Build directory for Cilk Plus RTS.  Must be an absolute pathname.
+case "$2" in
+    /*) BUILD_DIR="$2";;
+    *) echo "Second argument ($2) must be absolute pathname"; exit 1;;
+esac
+
+DEFAULT_NCPU=1
+NCPU="${3}"
+if test -z "${NCPU}" -a -r /proc/cpuinfo ; then
+    NCPU=$(grep -c '^processor' /proc/cpuinfo 2> /dev/null)
+fi
+if test -z "${NCPU}" ; then
+    if test -x /sbin/sysctl -o -x /usr/sbin/sysctl ; then
+    NCPU=$(PATH=${PATH}:/sbin:/usr/sbin sysctl -n hw.ncpu)
+    fi
+fi
+if test -z "${NCPU}" -o 0 -eq "${NCPU}" ; then
+    echo "Unknown CPU count; using ${DEFAULT_NCPU}"
+    NCPU=${DEFAULT_NCPU}
+fi
+
+if ! test -d "${OPENCILK_SOURCE}" ; then
+    echo "OpenCilk source tree ${OPENCILK_SOURCE} does not exist" 1>&2
+    exit 1
+fi
+
+exec < /dev/null
+
+echo "Building with ${NCPU:?} parallel jobs"
+
+set -ex
+
+mkdir -p "${BUILD_DIR}"
+
+cd "${BUILD_DIR}"
+
+cmake -DCMAKE_BUILD_TYPE=Release \
+      -DCMAKE_C_COMPILER=/opt/opencilk/clang \
+      -DCMAKE_CXX_COMPILER=/opt/opencilk/clang++ \
+      -DCMAKE_INSTALL_PREFIX="/opt/cilkrts" \
+      "${OPENCILK_SOURCE}"
+
+cmake --build . -j"${NCPU}"
+cmake --build . --target install
