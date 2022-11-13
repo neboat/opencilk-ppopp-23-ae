@@ -177,7 +177,7 @@ def unset_bazel_sysconfig(sys):
 # Get bazel config string to build with Cilkscale.
 def get_bazel_cilkscale_config(use_bitcode):
     if use_bitcode:
-        return "--config=cilkscale_bitcode"
+        return "--config=cilkscale --config=cilkscale_bitcode"
     return "--config=cilkscale"
 
 # Get bazel config string to enable OpenCilk pedigree support.
