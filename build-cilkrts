@@ -30,8 +30,8 @@ if test -z "${NCPU}" -o 0 -eq "${NCPU}" ; then
     NCPU=${DEFAULT_NCPU}
 fi
 
-if ! test -d "${OPENCILK_SOURCE}" ; then
-    echo "OpenCilk source tree ${OPENCILK_SOURCE} does not exist" 1>&2
+if ! test -d "${CILKRTS_SOURCE}" ; then
+    echo "Cilk Plus RTS source tree ${CILKRTS_SOURCE} does not exist" 1>&2
     exit 1
 fi
 
@@ -46,10 +46,10 @@ mkdir -p "${BUILD_DIR}"
 cd "${BUILD_DIR}"
 
 cmake -DCMAKE_BUILD_TYPE=Release \
-      -DCMAKE_C_COMPILER=/opt/opencilk/clang \
-      -DCMAKE_CXX_COMPILER=/opt/opencilk/clang++ \
+      -DCMAKE_C_COMPILER=/opt/opencilk/bin/clang \
+      -DCMAKE_CXX_COMPILER=/opt/opencilk/bin/clang++ \
       -DCMAKE_INSTALL_PREFIX="/opt/cilkrts" \
-      "${OPENCILK_SOURCE}"
+      "${CILKRTS_SOURCE}"
 
 cmake --build . -j"${NCPU}"
 cmake --build . --target install

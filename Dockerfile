@@ -23,7 +23,7 @@ RUN echo "Installing packages..." \
     make \
     python3 \
     libpython3-stdlib \
-    libtcmalloc-minimal4 \
+    libgoogle-perftools-dev \
     libopenmpi-dev \
     > /dev/null \
   && echo "Installing Bazel..." \
@@ -41,6 +41,7 @@ RUN echo "Installing packages..." \
   && /usr/local/src/ppopp-23-ae/build-cilkrts /usr/local/src/ppopp-23-ae/cilkrts \
     /usr/local/src/ppopp-23-ae/cilkrts/build \
   && echo "Cleaning temporary files..." \
+  && rm -rf /usr/local/src/opencilk.tar.gz \
   && rm -rf /usr/local/src/opencilk/build \
   && rm -rf /usr/local/src/ppopp-23-ae/cilkrts/build \
   && rm -rf /var/lib/apt/lists/* \
