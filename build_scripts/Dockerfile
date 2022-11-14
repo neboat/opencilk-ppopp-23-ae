@@ -35,10 +35,10 @@ RUN echo "Installing packages..." \
   && apt-get install -qqy --no-install-recommends bazel > /dev/null \
   && echo "Building OpenCilk..." \
   && tar -C /usr/local/src -xzf /usr/local/src/opencilk.tar.gz \
-  && /usr/local/src/ppopp-23-ae/build-opencilk /usr/local/src/opencilk \
+  && /usr/local/src/ppopp-23-ae/build_scripts/build-opencilk /usr/local/src/opencilk \
     /usr/local/src/opencilk/build \
   && echo "Building CilkRTS..." \
-  && /usr/local/src/ppopp-23-ae/build-cilkrts /usr/local/src/ppopp-23-ae/cilkrts \
+  && /usr/local/src/ppopp-23-ae/build_scripts/build-cilkrts /usr/local/src/ppopp-23-ae/cilkrts \
     /usr/local/src/ppopp-23-ae/cilkrts/build \
   && echo "Cleaning temporary files..." \
   && rm -rf /usr/local/src/opencilk.tar.gz \
