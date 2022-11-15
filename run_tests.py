@@ -31,13 +31,10 @@ logger = logging.getLogger(sys.argv[0])
 # File object to save output of build process, for debugging purposes.
 build_output_fo = None
 
-# opencilk_libdir = "/opt/opencilk/lib/clang/14.0.6/lib/x86_64-unknown-linux-gnu/"
-opencilk_libdir = "/data/work/opencilk/build/lib/clang/14.0.6/lib/x86_64-unknown-linux-gnu/"
+opencilk_libdir = "/opt/opencilk/lib/clang/14.0.6/lib/x86_64-unknown-linux-gnu/"
 top_dir = os.getcwd()
-# cilkrts_dir = "/opt/cilkrts"
-# compiler_bin_dir = "/opt/opencilk/bin/"
-cilkrts_dir = "/data/work/tests/ppopp-23-ae/cilkrts/install"
-compiler_bin_dir = "/data/work/opencilk/build/bin/"
+cilkrts_dir = "/opt/cilkrts"
+compiler_bin_dir = "/opt/opencilk/bin/"
 rawdata_dir = "./rawdata"
 
 ###########################################################################

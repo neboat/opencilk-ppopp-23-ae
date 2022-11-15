@@ -38,9 +38,8 @@
 #LINKER=g++
 #CXX=mpic++
 #LINKER=mpic++
-TAPIR_PATH ?= /data/compilers/tapir/src-master/build-dbg/bin
-CXX=$(TAPIR_PATH)/clang++
-LINKER=$(TAPIR_PATH)/clang++
+CXX=clang++
+LINKER=clang++
 
 # 1) Build with MPI or not?
 #    If you want to run the program with MPI, make sure USE_MPI is set 
