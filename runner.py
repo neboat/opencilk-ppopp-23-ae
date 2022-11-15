@@ -1,3 +1,13 @@
+###########################################################################
+### runner.py: Script for repeatedly running an application binary on
+### different numbers of processors and collecting performance
+### measurements.
+###
+### Use the run() function to run a particular program binary for a
+### specified number of trials and on different CPU counts.  Raw
+### performance results will be written to a CSV file.
+###########################################################################
+
 import argparse
 import csv
 import datetime
@@ -11,6 +21,7 @@ logger = logging.getLogger(__name__)
 ################################################################################
 ## Utility methods
 
+# Print captured stdout and stderr.
 def print_stdout_stderr(out, err, prog, prog_args):
     print()
     print(">> STDOUT (" + prog + " " + " ".join(prog_args) + ")")
@@ -23,9 +34,12 @@ def print_stdout_stderr(out, err, prog, prog_args):
     print()
     return
 
+# Get the number of CPUs on the system.  Excludes hyperthreads if it
+# can parse the CPU configuration of the system.
 def get_n_cpus():
     return len(get_cpu_ordering())
 
+# Run the given command as a subprocess.
 def run_command(cmd, asyn = False):
     proc = subprocess.Popen([cmd], shell=True, stdout=subprocess.PIPE,
                             stderr=subprocess.PIPE)
@@ -35,6 +49,9 @@ def run_command(cmd, asyn = False):
     else:
         return ""
 
+# Run the command `rcommand` for `trials` times on `P` CPUs.  Uses
+# taskset to restrict process to a given list of CPU IDs, if possible.
+# In particular, Darwin does not support taskset.
 def run_on_p_workers(P, trials, rcommand):
     cpu_ordering = get_cpu_ordering()
     cpu_online = cpu_ordering[:P]
@@ -52,19 +69,17 @@ def run_on_p_workers(P, trials, rcommand):
                                 stdout=subprocess.PIPE,
                                 stderr=subprocess.PIPE)
         out,err=proc.communicate()
-
-        # print(">> STDOUT (" + rcommand + ")")
-        # print(str(out,"utf-8"), file=sys.stdout, end='')
-        # print("<< END STDOUT")
-        # print()
-        # print(">> STDERR (" + rcommand + ")")
-        # print(str(err,"utf-8"), file=sys.stderr, end='')
-        # print("<< END STDERR")
-
         output = output + str(out, "utf-8")
         errout = errout + str(err, "utf-8")
     return output,errout
 
+# Attempt to parse the CPU configuration of the system and return a
+# list of CPU IDs that:
+# 1) excludes hyperthreads, and
+# 2) groups CPU IDs on the same socket consecutively.
+#
+# Parsing the CPU configuration is best-effort.  If it cannot parse
+# the CPU configuration, then simply returns a list of P CPU IDs.
 def get_cpu_ordering():
     if sys.platform == "darwin":
         # TODO: Replace with something that analyzes CPU configuration on Darwin
@@ -100,10 +115,17 @@ def get_cpu_ordering():
     return ret
 
 ################################################################################
-
+# Run the specified program with the given arguments.
+#   prog - Binary executable to run.
+#   prog_args - List of arguments to pass to the binary
+#   parse_output_fn - Function to parse the output of running the
+#     binary to extract the running time.
+#   requested_trials - Number of times to rerun the binary.
+#   cpu_counts - String describing the set of CPU counts to run the binary on.
+#   out_csv - CSV filename where raw performance data will be written.
 def run(prog, prog_args, parse_output_fn, requested_trials="1",
         cpu_counts=None, out_csv="out.csv"):
-    # get benchmark runtimes
+    # Parse cpu_counts argument to get list of CPU counts.
     NCPUS = get_n_cpus()
     if cpu_counts is None:
         cpu_counts = [NCPUS]
@@ -112,19 +134,26 @@ def run(prog, prog_args, parse_output_fn, requested_trials="1",
     else:
         cpu_counts = list(map(int, cpu_counts.split(",")))
 
+    # Join binary name and prog_args list to generate run command.
     run_command = prog + " " + " ".join(prog_args)
 
     logger.info("Timing " + run_command + " on <= " + str(NCPUS) + " cpus.")
 
     results = dict()
     last_CPU = NCPUS+1
+    # Loop over possible CPU counts.
     for count in range(1, NCPUS+1):
+        # If this count is a requested CPU count to use, run the
+        # program on that CPU count.
         if count in cpu_counts:
             try:
                 timings = dict()
+                # Run the program on that CPU count.
                 out,err = run_on_p_workers(count, requested_trials,
                                            run_command)
+                # Parse the output of the run to extract timings.
                 parse_output_fn(out, err, prog, prog_args, timings)
+                # Add the timings to the set of results.
                 if str(count) not in results:
                     results[str(count)] = timings
                 else:
@@ -135,13 +164,15 @@ def run(prog, prog_args, parse_output_fn, requested_trials="1",
                 last_CPU = count
                 break
 
+    # Determine number of trials run.
     trials = 0
     for cpu_count in results:
         for bench in results[cpu_count]:
             trials = max(trials, len(results[cpu_count][bench]))
 
-    # Output results to the CSV file
+    # Output results to the CSV file.
     with open(out_csv, "w") as out_csv_file:
+        # # Generate header for CSV file
         # out_csv_file.write("bench,P," + ','.join(["t" + str(i) for i
         #                                           in range(1,trials+1)]) + '\n')
         for cpu_count in results:

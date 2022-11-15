@@ -21,6 +21,8 @@ RUN echo "Installing packages..." \
     clang \
     lld \
     make \
+    emacs \
+    vim \
     python3 \
     libpython3-stdlib \
     libgoogle-perftools-dev \

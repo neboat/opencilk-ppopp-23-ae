@@ -1,41 +1,63 @@
+###########################################################################
+### run_tests.py: Top-level script for running OpenCilk empirical
+### evaluation.
+###
+### You can run this script as follows:
+###
+###     python3 ./run_tests.py [options]
+###
+### For information about available options, run:
+###
+###     python3 ./run_tests.py -h
+###
+###########################################################################
+
 import argparse
 import csv
 import datetime
+import glob
 import logging
 import os
 import re
 import subprocess
 import statistics
 import sys
+import time
 
 from runner import run, get_cpu_ordering, get_n_cpus
 
+# Logger to report actions of this script.
 logger = logging.getLogger(sys.argv[0])
+# File object to save output of build process, for debugging purposes.
+build_output_fo = None
 
-opencilk_libdir = "/opt/opencilk/lib/clang/14.0.6/lib/x86_64-unknown-linux-gnu/"
+# opencilk_libdir = "/opt/opencilk/lib/clang/14.0.6/lib/x86_64-unknown-linux-gnu/"
+opencilk_libdir = "/data/work/opencilk/build/lib/clang/14.0.6/lib/x86_64-unknown-linux-gnu/"
 top_dir = os.getcwd()
-cilkrts_dir = "/opt/cilkrts"
-compiler_bin_dir = "/opt/opencilk/bin/"
+# cilkrts_dir = "/opt/cilkrts"
+# compiler_bin_dir = "/opt/opencilk/bin/"
+cilkrts_dir = "/data/work/tests/ppopp-23-ae/cilkrts/install"
+compiler_bin_dir = "/data/work/opencilk/build/bin/"
 rawdata_dir = "./rawdata"
 
 ###########################################################################
-### Test parameters
+### Test-script parameters
 
-# The following test suites are supported:
+# Benchmark test suites:
 # - 'cilk5' - The Cilk-5 benchmarks
+# - 'gbbs' - Non-randomized programs from the graph-based benchmark suite (GBBS)
 # - 'minife' - The miniFE benchmark
-# - 'gbbs' - Deterministic programs from the graph-based benchmark suite (GBBS)
 # - 'random' - Assorted randomized Cilk programs
 # - 'gbbs-random' - Randomized programs from GBBS
-all_test_suites=['cilk5','minife','gbbs','random','gbbs-random']
+all_test_suites = ['cilk5','gbbs','minife','random','gbbs-random']
 
-# The following task-parallel systems are supported:
+# Task-parallel systems:
 # - 'serial' - Compile and run the serial projection of the given Cilk code
-# - 'opencilk' - Compile and run the Cilk code with OpenCilk
 # - 'cilkplus' - Compile and run the Cilk code with Intel Cilk Plus
-all_systems=['serial','opencilk','cilkplus']
+# - 'opencilk' - Compile and run the Cilk code with OpenCilk
+all_systems = ['serial','cilkplus','opencilk']
 
-# The following experiments are supported:
+# Experiments:
 # - 'baseline' - Measure baseline performance of different systems.
 # - 'pedigrees' - Measure performance of OpenCilk with pedigree support enabled.
 # - 'cilkscale' - Measure performance of OpenCilk with the Cilkscale scalability analyzer.
@@ -43,7 +65,7 @@ all_systems=['serial','opencilk','cilkplus']
 # - 'dprng' - Measure performance of randomized Cilk programs using different DPRNGs.
 all_experiments=['baseline','pedigrees','cilkscale','cilkscale-bitcode','dprng']
 
-# The following options for deterministic parallel random-number generation (DPRNG) are supported:
+# Deterministic parallel random-number generators (DPRNGs):
 # - 'dotmix' - Use the Intel Cilk Plus DotMix DPRNG library, which uses pedigrees.
 # - 'builtin' - Use the OpenCilk runtime's built-in DPRNG.
 all_dprngs = ["dotmix", "builtin"]
@@ -51,14 +73,14 @@ all_dprngs = ["dotmix", "builtin"]
 # The set of Cilk-5 benchmarks to run
 all_cilk5_progs = ['cholesky', 'cilksort', 'fft', 'heat', 'lu', 'matmul', 'nqueens', 'qsort', 'rectmul', 'strassen']
 
-# The set of deterministic GBBS benchmarks to run
-all_gbbs_progs=['BFS/NonDeterministicBFS:BFS_main',
-                'KCore/JulienneDBS17:KCore_main',
-                'TriangleCounting/ShunTangwongsan15:Triangle_main',
-                'PageRank:PageRank_main']
+# The set of non-randomized GBBS benchmarks to run
+all_gbbs_progs = ['BFS/NonDeterministicBFS:BFS_main',
+                  'KCore/JulienneDBS17:KCore_main',
+                  'TriangleCounting/ShunTangwongsan15:Triangle_main',
+                  'PageRank:PageRank_main']
 
 # The set of assorted randomized Cilk programs to run
-all_randbench_progs=['pi','fib_rng']
+all_randbench_progs = ['pi','fib_rng']
 
 # The set of randomized GBBS benchmarks to run
 all_rng_gbbs_progs = ["MaximalIndependentSet/RandomGreedy:MaximalIndependentSet_main",
@@ -69,9 +91,18 @@ all_rng_gbbs_progs = ["MaximalIndependentSet/RandomGreedy:MaximalIndependentSet_
 
 # Run a given command as a subprocess and wait for it to complete.
 def runcmd(subProcCommand):
-    logger.info(subProcCommand)
-    proc = subprocess.Popen([subProcCommand], shell=True)
+    if build_output_fo is not None:
+        proc = subprocess.Popen([subProcCommand], shell=True,
+                                stdout=build_output_fo.fileno(),
+                                stderr=subprocess.STDOUT)
+    else:
+        proc = subprocess.Popen([subProcCommand], shell=True,
+                                stdout=subprocess.DEVNULL,
+                                stderr=subprocess.DEVNULL)
+
     proc.wait()
+    if proc.returncode != 0:
+        raise CalledProcessError()
 
 ###########################################################################
 ### Methods for configuring different builds
@@ -344,6 +375,7 @@ def get_cilk5_input(prog, small_inputs):
 
 # Build the Cilk-5 benchmark suite for the given system and experiment.
 def build_cilk5(sys, exp):
+    logger.info("Building cilk5 bencharks with '"+sys+"' for experiment '"+exp+"'.")
     set_environ_for_experiment(exp)
 
     subProcCommand = "make -C cilk5 clean; make -C cilk5 CC="+os.path.join(compiler_bin_dir,"clang")+" CXX="+os.path.join(compiler_bin_dir,"clang++")+" -B "+make_sysflag(sys)
@@ -425,6 +457,7 @@ def get_minife_input(small_inputs):
 
 # Build the miniFE test for the given system and experiment.
 def build_minife(sys, exp):
+    logger.info("Building miniFE benchark with '"+sys+"' for experiment '"+exp+"'.")
     set_environ_for_experiment(exp)
     os.environ['CC'] = os.path.join(compiler_bin_dir,"clang")
     os.environ['CXX'] = os.path.join(compiler_bin_dir,"clang++")
@@ -530,6 +563,7 @@ def parse_gbbs_output(output, err, prog, prog_args, timings):
 # Build the specified GBBS benchmark for the given system and experiment
 # or DPRNG.
 def build_gbbs(sys, exp, dprng, prog):
+    logger.info("Building GBBS benchark '"+prog+"' with '"+sys+"' for experiment '"+exp+"'.")
     config = set_bazel_sysconfig(sys)
     if exp == "cilkscale":
         config += " "+get_bazel_cilkscale_config(False)
@@ -539,18 +573,19 @@ def build_gbbs(sys, exp, dprng, prog):
         config += " "+get_bazel_pedigree_config(sys)
 
     if dprng != "":
+        logger.info("\tUsing DPRNG '"+dprng+"'.")
         config += " "+get_bazel_dprng_config(dprng, sys)
 
     os.chdir(os.path.join(top_dir,"gbbs"))
 
-    subProcCommand = "bazel run "+config+" //benchmarks/"+prog
+    subProcCommand = "bazel build "+config+" //benchmarks/"+prog
     runcmd(subProcCommand)
 
     os.chdir(top_dir)
 
     unset_bazel_sysconfig(sys)
 
-# Run the deterministic GBBS benchmarks for all specified systems and
+# Run the non-randomized GBBS benchmarks for all specified systems and
 # experiments, with the given configuration options.
 def run_gbbs_tests(systems, experiments, small_inputs, trials, cpu_counts, csv_tag,
                    accum_data, all_prog_run, all_sys_run, programs=all_gbbs_progs):
@@ -634,6 +669,7 @@ def get_randbench_input(prog, trials, small_inputs):
 # Build the randomized Cilk programs for the given system.  These
 # programs are hard-coded to test different DPRNGs.
 def build_randbench(sys):
+    logger.info("Building randomized Cilk benchmarks with '"+sys+"' for experiment 'dprng'.")
     subProcCommand = "make -C random clean; make -C random CC="+os.path.join(compiler_bin_dir,"clang")+" CXX="+os.path.join(compiler_bin_dir,"clang++")+" -B "+make_sysflag(sys)
     runcmd(subProcCommand)
 
@@ -693,7 +729,7 @@ def run_rng_gbbs_tests(systems, dprngs, small_inputs, trials, cpu_counts, csv_ta
                     continue
                 test = get_test_name_from_prog(prog)
                 # Build the test.
-                build_gbbs(sys, "", dprng, prog)
+                build_gbbs(sys, 'dprng', dprng, prog)
                 out_csv = os.path.join(rawdata_dir,
                                        '-'.join(["gbbs","random",test,sys,dprng,csv_tag])+".csv")
                 # Run the program and output results into out_csv
@@ -714,11 +750,10 @@ def run_rng_gbbs_tests(systems, dprngs, small_inputs, trials, cpu_counts, csv_ta
 def main():
     # Setup and parse script arguments.
     ap = argparse.ArgumentParser()
+    # Main script arguments.
     ap.add_argument("--test-suites", "-u",
                     help="Comma-separated list of test suites to run.  (default: "+','.join(all_test_suites)+")",
                     default=','.join(all_test_suites))
-    ap.add_argument("--programs",
-                    help="comma-separated list of programs to run.  Programs must be within the test-suites to run.  The miniFE test suite ignores this option.")
     ap.add_argument("--systems", "-y",
                     help="Comma-separated list of systems to test.  (default: "+','.join(all_systems)+")",
                     default=','.join(all_systems))
@@ -730,10 +765,19 @@ def main():
     ap.add_argument("--cpu-counts", "-c",
                     help="Comma-separated list of cpu counts to use.  (default: "+str(get_n_cpus())+")",
                     default=str(get_n_cpus()))
-    ap.add_argument("--trials", "-t", help="Number of trials to run.  (default: 1)", default="1")
+    ap.add_argument("--trials", "-t", help="Number of trials to run.  (default: 5)", default="5")
+    ap.add_argument("--programs",
+                    help="Comma-separated list of programs to run.  Programs must be within the test-suites to run.")
+
+    # Helper option to run a small version of the tests, just to
+    # verify that the tests compile and run.
+    ap.add_argument("--quick-test", "-q", help="Run abbreviated version of tests, to verify that the tests compile and run.  Overrides other options.",
+                    default=False, action=argparse.BooleanOptionalAction)
 
     args = ap.parse_args()
     # print(args)
+
+    logging.basicConfig(level=logging.INFO)
 
     # The list of test suites to run.
     test_suites = args.test_suites.split(',')
@@ -755,15 +799,47 @@ def main():
     programs = None
     if args.programs is not None:
         programs = args.programs.split(',')
+        if 'minife' in programs and 'minife' not in test_suites:
+            test_suites.append('minife')
+
+    # If requested, override options to perform a quick test.
+    if args.quick_test:
+        logger.info("ALERT: Running a quick test to check that test suites build and run.")
+        test_suites = all_test_suites
+        systems = "cilkplus","opencilk"
+        experiments = all_experiments
+        small_inputs = True
+        cpu_counts = str(get_n_cpus())
+        trials = "1"
+        programs = [all_cilk5_progs[0],all_gbbs_progs[0],"minife",all_randbench_progs[0],all_rng_gbbs_progs[0]]
+
+    # Print out run options
+    logger.info("Running with the following options:")
+    logger.info("\texperiments: "+str(experiments))
+    logger.info("\ttest_suites: "+str(test_suites))
+    if programs is None:
+        logger.info("\tprograms: "+str(all_cilk5_progs + all_gbbs_progs + ['minife'] + all_randbench_progs + all_rng_gbbs_progs))
+    else:
+        logger.info("\tprograms: "+str(programs))
+    logger.info("\tsystems: "+str(systems))
+    logger.info("\tsmall inputs: "+str(small_inputs))
+    logger.info("\tcpu counts: "+cpu_counts)
+    logger.info("\ttrials: "+trials)
+
     # Tag all CSVs generated with the year, month, day, hour, and
     # minute when this script is invoked.
     csv_tag = datetime.datetime.now().strftime("%Y%m%d-%H%M")
-
-    logging.basicConfig(level=logging.INFO)
+    # Also record if we're using small inputs in the tag.
+    if small_inputs:
+        csv_tag = "small-"+csv_tag
 
     # Ensure there is a directory for raw data.
     if not os.path.exists(rawdata_dir):
         os.mkdir(rawdata_dir)
+
+    # Open file object for build output.
+    global build_output_fo
+    build_output_fo = open(os.path.join(rawdata_dir,"build-"+csv_tag+".out"), 'w')
 
     # All aggregated performance results will be placed into this
     # dictionary, indexed by experiment.  Each experiment maps to a
@@ -777,6 +853,10 @@ def main():
     # part of that experiment.
     all_sys_run = dict()
 
+    # Time the running of the tests and aggregation of results,
+    # because why not.
+    start = time.time()
+
     # Iterate over the test suites.
     for test_suite in test_suites:
         if test_suite == 'cilk5':
@@ -787,10 +867,6 @@ def main():
             else:
                 run_cilk5_tests(systems, experiments, small_inputs, trials, cpu_counts, csv_tag,
                                 accum_data, all_prog_run, all_sys_run)
-        elif test_suite == 'minife':
-            # Run the miniFE benchmark for all experiments.
-            run_minife_tests(systems, experiments, small_inputs, trials, cpu_counts, csv_tag,
-                             accum_data, all_prog_run, all_sys_run)
         elif test_suite == 'gbbs':
             # Run the non-randomized GBBS benchmarks for all experiments.
             if programs is not None:
@@ -799,6 +875,10 @@ def main():
             else:
                 run_gbbs_tests(systems, experiments, small_inputs, trials, cpu_counts, csv_tag,
                                accum_data, all_prog_run, all_sys_run)
+        elif test_suite == 'minife' and (programs is None or 'minife' in programs):
+            # Run the miniFE benchmark for all experiments.
+            run_minife_tests(systems, experiments, small_inputs, trials, cpu_counts, csv_tag,
+                             accum_data, all_prog_run, all_sys_run)
         elif test_suite == 'random':
             # The ramdom suite only applies to the DPRNG experiment.
             if 'dprng' not in experiments:
@@ -896,6 +976,16 @@ def main():
     #     write_accumulated_results(accum_csv, accum_data[combined_key],
     #                               all_prog_run[combined_key], all_sys_run[combined_key],
     #                               cpu_counts)
+
+    # Clean any YAML files generated by miniFE.
+    for yaml_file in glob.glob("*.yaml"):
+        os.remove(yaml_file)
+
+    end = time.time()
+    print("Tests completed in {:0.6f} seconds.".format(end-start))
+
+    # Close file object for build output.
+    build_output_fo.close()
 
     return 0
 
