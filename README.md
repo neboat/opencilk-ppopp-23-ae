@@ -250,6 +250,8 @@ column headings indicate that the programs were compiled and run
 with the library-based or bitcode-ABI-based versions,
 respectively, of Cilkscale.
 
+***TODO: Add examples of valid CSV outputs.***
+
 # Extensions
 
 TODO: Revise this part
