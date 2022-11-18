@@ -1,44 +1,51 @@
 # Introduction
 
 This document describes how to evaluate the artifact for the PPoPP
-2023 paper submission, "NAC: A Moduler and Extensible Software
+2023 paper submission, "NAC: A Modular and Extensible Software
 Infrastructure for Fast Task-Parallel Code."  This evaluation supports
 assessment of the functionality and reusability of the artifact (red
 badge) and validation of the results of the empirical evaluation,
 in Section 4 of the paper (blue badge).
 
-In this artifact and document, the paper's anonymized names for the
-system and its components have been deanonymized:
-- The name of the system, "NAC," has been deanonymized to "OpenCilk."
+Throughout this document and the artifact, the paper's anonymized
+names for the system and its components have been deanonymized.
+- The name of the system, "NAC," has been deanonymized to
+  "OpenCilk."
 - The name for the scalability analyzer, "NAC SA," has been
   deanonymized to "Cilkscale."
 
 This artifact consists of a Docker image containing precompiled
-binaries for the OpenCilk system as well as source code for all
+binaries for OpenCilk as well as source code for all
 benchmark programs used in the empirical evaluation of the paper.
-Building OpenCilk from source is a time-consuming and
+The OpenCilk source code is archived here:
+<https://doi.org/10.5281/zenodo.7336106>.
+But building OpenCilk from source is a time-consuming and
 computing-resource-intensive process.  Therefore, we are providing
-this Docker image with precompiled binaries to facilitate this
-evaluation.  These binaries have been compiled for Intel x86-64.
+this Docker image with precompiled binaries to facilitate the
+evaluation.  These binaries have been compiled for modern Intel
+x86-64 processors.
 
-The source code for OpenCilk, including the compiler, runtime
-system, and tools, can be found in `/usr/local/src/opencilk`
-within the Docker image.
+For reference, the source code for OpenCilk, including the
+compiler, runtime system, and tools, can be found at
+`/usr/local/src/opencilk` within the Docker image.
 
 # Getting started guide
 
-The following steps guide you through setting up the Docker image
-for the artifact evaluation and verifying that it runs as intended
-on your system.
+The following steps will guide you through setting up the Docker
+image for the artifact evaluation and verifying that it runs as
+intended on your system.
 
-*Prerequisites:* The Docker image has been tested on Intel x86-64
-machines running recent versions of Linux, such as Ubuntu 22.04,
-and Docker version 20.10.21.  You can find instructions on how to
-install a recent version of Docker on <https://docs.docker.com/>.
-For example, [here](https://docs.docker.com/engine/install/ubuntu/)
-are the instructions to install Docker on Ubuntu.
+*Prerequisites:* These instructions assume you are using a modern
+multicore x86-64 machine running a recent version of Linux and that
+has Docker installed.  In particular, the Docker image has been
+tested on x86-64 machines running recent versions of Linux, such
+as Ubuntu 22.04, and Docker version 20.10.21.  You can find
+instructions on how to install the latest version of Docker at
+<https://docs.docker.com/>. For example,
+[here](https://docs.docker.com/engine/install/ubuntu/) are the
+instructions to install Docker on Ubuntu.
 
-1. Download the Docker image from <https://people.csail.mit.edu/neboat/opencilk-ppopp-23-ae/docker-opencilk-ppopp-23-ae.tar.gz>:
+1. Download the Docker image (2.4GB) from <https://people.csail.mit.edu/neboat/opencilk-ppopp-23-ae/docker-opencilk-ppopp-23-ae.tar.gz>:
 
 ```console
 wget https://people.csail.mit.edu/neboat/opencilk-ppopp-23-ae/docker-opencilk-ppopp-23-ae.tar.gz
@@ -56,31 +63,31 @@ docker load -i docker-opencilk-ppopp-23-ae.tar.gz
 docker run -it opencilk-ppopp-23-ae /bin/bash
 ```
 
-4. Once inside the container, enter the test directory:
+4. Enter the test directory inside the Docker container:
 
 ```console
 cd /usr/local/src/ppopp-23-ae
 ```
 
 5. Use the `run_tests.py` script with the `--quick-test` flag 
-   to verify that the experiments run correctly on the various
-   benchmark suites:
+   to verify that the experiments run correctly on programs within
+   the various benchmark suites:
 
 ```console
 python3 ./run_tests.py --quick-test
 ```
 
 The `run_tests.py` script will produce informational output 
-about the tests it is building and running as it executes.
-The quick-test run takes approximately 6.5 minutes on a modern
+about which test it is building and running as it executes.
+The quick-test run takes approximately 5 minutes on a modern
 Intel x86-64 system with 8 processor cores, such as an
 [AWS c5.4xlarge instance](https://aws.amazon.com/ec2/instance-types/c5/).
 If all steps complete successfully, then at the end of the
 quick-test run, you should see something like the following
 message:
 
-```console
-Tests completed in 397.1234 seconds.
+```
+Tests completed in 286.733336 seconds.  Run tag: small-20221118-0408.
 ```
 
 # Step-by-step instructions
@@ -96,28 +103,40 @@ hardware and system configuration --- you can use this artifact to
 replicate the following results:
 - *OpenCilk functionality:* OpenCilk supports compiling and running a
   variety of Cilk programs using either the Cilk Plus or OpenCilk 
-  runtime systems.
+  runtime systems.  OpenCilk also supports the use of tools such as
+  the Cilkscale scalability analyzer to analyze task-parallel program
+  execution.
 - *Figure 3 performance trend:* Across the non-randomized benchmarks,
-  the baseline performance of OpenCilk in generally faster than Cilk
-  Plus, especially for parallel execution.
-- *Figure 4 performane trend:* Across the non-randomized benchmarks,
-  OpenCik runs efficient with pedigree and DPRNG support enabled,
+  the baseline performance of OpenCilk --- without pedigree and DPRNG
+  support enabled and without any tool, such as Cilkscale, enabled ---
+  is typically faster than that of Cilk Plus.  In particular, the
+  parallel running times of these benchmarks is typically better when
+  using OpenCik, compared to Cilk Plus.
+- *Figure 4 performance trend:* Across the non-randomized benchmarks,
+  OpenCik runs efficiently with pedigree and DPRNG support enabled,
   generally incurring low overheads compared to the OpenCilk's
   baseline performance and often outperforming Cilk Plus.
-- *Figure 5 performance trend:* On randomized benchmarks, OpenCilk
-  supports efficient use of the DotMix DORNG, often outperforming Cilk
-  Plus using DotMix.  In addition, OpenCilk's builtin DPRNG improves
-  the performance of these benchmarks compared to using DotMix.
-- *Figure 6 performance trend:* The bitcode-ABI version of Cilkscale
-  generally runs faster than the library version of Cilkscale.
+- *Figure 5 performance trend:* On the randomized benchmarks, OpenCilk
+  supports efficient use of the DotMix deterministic parallel random-
+  number generator (DPRNG), often outperforming Cilk Plus using DotMix.
+  In addition, these benchmarks typically run faster when using
+  OpenCilk's builtin DPRNG rather than DotMix.
+- *Figure 6 performance trend:* On the non-randomized benchmarks, the
+  bitcode-ABI version of Cilkscale typically runs faster than the
+  library version of Cilkscale.
 
 At a high level, you can replicate these results using the following
 steps:
-1. Run the `run_tests.py` script with appropriate parameters.
+1. Run the `run_tests.py` script (with any necessary parameters):
 
-2. Copy the aggregate CSV files out of the Docker image, e.g., by
-   running commands like the following outside of Docker, replacing
-   `<tag>` with the appropriate tag identifying the run.
+```console
+python3 ./run_tests.py
+```
+
+2. Copy the aggregate CSV files out of the Docker container, e.g.,
+   by running commands like the following outside of the Docker
+   container, replacing `<tag>` with the run tag reported by
+   `run_tests.py`.
 
 ```console
 docker cp `docker ps -alq`:/usr/local/src/ppopp-23-ae/baseline-<tag>.csv .
@@ -126,12 +145,30 @@ docker cp `docker ps -alq`:/usr/local/src/ppopp-23-ae/dprng-<tag>.csv .
 docker cp `docker ps -alq`:/usr/local/src/ppopp-23-ae/cilkscale-compare-<tag>.csv .
 ```
 
-3. Examine these CSV files in whichever spreadsheet program you 
-   prefer, such as Google Sheets or Microsoft Excel.
+3. Examine the CSV files in the spreadsheet program of your choosing,
+   such as Google Sheets or Microsoft Excel.
 
 The following sections describe these high-level steps in detail.
 
 ## Running `run_tests.py`
+
+You can run all of the benchmark applications for the experiments
+described in the paper simply by running `run_tests.py` as follows:
+
+```console
+python3 ./run_tests.py
+```
+
+Running `run_tests.py` without any command-line arguments
+will run all benchmark programs 10 times each and run the
+parallel executables only on the number of CPU cores on the system
+(excluding hyperthreads).  Although this default behavior does not
+match the experimental setup used in the paper, it runs the
+empirical tests more quickly in a manner that still supports
+evaluation of the artifact.  Running `run_tests.py` with these default
+parameters takes approximately 2.5 hours on a modern Intel x86-64
+system with 8 processor cores (specifically, an AWS c5.4xlarge
+instance).
 
 The `run_tests.py` script accepts a variety of options to run
 the empirical evaluation in different configurations, in order
@@ -144,26 +181,27 @@ python3 ./run_tests.py -h
 
 Section 4 describes the system configuration and parameters used for
 the paper's empirical evaluation, including the number of times each
-executable was run (20) and the numbers of CPU processor cores tested
-on (1, 24, and 48).  If you have **ample time** --- approximately a
-day --- **and computer resources** --- at least 48 CPU processor cores
---- you can use the `run_tests.py` script to run the tests using
-similar parameters on your system as follows:
+executable was run (20) and the numbers of CPU processor cores each
+parallel executable was tested on (1, 24, and 48).  If you have
+**ample time** --- several hours --- **and computer resources**
+--- at least 48 CPU processor cores --- you can use the
+`run_tests.py` script to run the tests using these parameters as
+follows:
 
  ```console
  python3 ./run_tests.py -t 20 -c 1,24,48
  ```
 
-There are several ways to run the application tests and thereby
-evaluate the artifact more quickly.
+There are several ways to run the application tests more quickly.
 
-- By default, running `python3 ./run_tests.py` without any arguments
-  will run all benchmark programs with 5 trials each and run the 
-  parallel executables only on the number of CPU cores on the system.
-  These defaults will run the application tests more quickly, but
-  the final performance results may exhibit more variability between
-  runs, and it will not include 1-core running times for the parallel
-  executables.  ***TODO: Example running time of this configuration.***
+- Running `python3 ./run_tests.py` without any arguments
+  will run the benchmark programs for all experiments more quickly.
+  Compared to using the parameters from the paper, the final 
+  performance results may exhibit more variability --- due to
+  performing 10 runs per executable instead of 20 --- and it will
+  not include 1-core running times for the parallel executables.
+  However, such a run should still produce results that demonstrate
+  the aforementioned performance trends.
 
 - You can run the benchmark tests with **smaller inputs** by passing
   the `-s` flag to `run_tests.py`.
@@ -171,23 +209,26 @@ evaluate the artifact more quickly.
 - You can specify **different CPU counts** to run the parallel
   executables on using the `-c` flag.  For example, on a system with
   24 CPU cores, the flag `-c 1,24` will run all parallel executables
-  on 1 and 24 CPU cores.
+  on 1 and 24 CPU cores.  The `run_tests.py` script will never run
+  the executables on more CPU cores than are available on the system,
+  regardless of the argument passed to the `-c` flag.
 
-- You can select a **subset of the programs** to run using the
-  `--programs` flag.  In particular, the GBBS benchmarks take a
+- You can use the `--programs` flag to select a **subset of
+  programs** to run.  In particular, the GBBS benchmarks take a
   significant amount of time to compile, and some take substantial
-  time to run.  To run only the BFS and KCore benchmarks from GBBS,
-  for example, pass
+  time to run, especially on 1 processor.  To run only the BFS and KCore
+  benchmarks from GBBS, for example, pass
   `--programs BFS/NonDeterministicBFS:BFS_main,KCore/JulienneDBS17:KCore_main`
   to `run_tests.py`.
 
-- You can run specify the **number of trials** to run each executable
-  using the `-t` flag.  For example, specifying `-t 10` will run each
-  executable 10 times, and specifying `-t 3` will run each executable
-  3 times.  Each running time in the final CSVs will be the median of
-  all trials.  Please note that we do not recommend running the 
-  executables with fewer trials, as doing so will increase the 
-  variability of the measured results.
+- You can specify the **number of trials** to run each executable
+  using the `-t` flag.  For example, specifying `-t 5` will run each
+  executable 5 times.  On a modern Intel x86-64 machine with 8 cores,
+  running `run_tests.py` with `-t 5` and no other arguments takes
+  approximately 1.5 hours.  Each running time in the final CSVs will be the
+  median of the trials performed.  Please note that we do *not* recommend
+  running the executables with too few trials, as doing so will
+  increase the variability of the aggregated results.
 
 ## Getting the CSV files
 
@@ -195,16 +236,17 @@ When the `run_tests.py` script is run to perform all experiments, it
 will generate four CSV files containing aggregated performance results
 for those experiments: `baseline-<tag>.csv`, `pedigrees-<tag>.csv`,
 `dprng-<tag>.csv`, and `cilkscale-compare-<tag>.csv`.  In these CSV
-filenames, `<tag>` denotes with a ***run tag***, which includes the
-year, month, day, hour, and minute of the invocation of the 
-`run_tests.py` script.  If small inputs are used, the run tag will
-also include the keyword `small`.
+filenames, `<tag>` denotes a ***run tag***, which identifies the run
+by the year, month, day, hour, and minute of the invocation of
+`run_tests.py`.  If small inputs are used, the run tag will also 
+include the keyword `small`.  On completion, the `run_tests.py` script
+will report the tag for its run.
 
 You can copy the CSV files produced by `run_tests.py` out of
-the Docker image using the `docker cp` command on each file.
-For example, running the following commands outside of the Docker
-image will copy out the four CSV files with aggregated
-performance results, replacing `<tag>` with the true run tag:
+the Docker container using the `docker cp` command outside of the
+container. For example, running the following commands outside of the
+Docker container will copy the four CSV files with aggregated
+performance results out, replacing `<tag>` with the run tag:
 
 ```console
 docker cp `docker ps -alq`:/usr/local/src/ppopp-23-ae/baseline-<tag>.csv .
@@ -216,30 +258,32 @@ docker cp `docker ps -alq`:/usr/local/src/ppopp-23-ae/cilkscale-compare-<tag>.cs
 Note that `docker ps -alq` provides a convenient way to get the ID
 of the latest container created.  If you are using other Docker
 containers at the same time, use `docker ps` to find the container
-ID corresponding with your run of the `opencilk-ppopp-23-ae` image.
+ID corresponding with your run of the `opencilk-ppopp-23-ae` image,
+then use that ID in place of `docker ps -alq` in the `docker cp`
+commands above.
 
 ## Examining the CSV files
 
 The generated CSV files correspond with the empirical evaluation
 in the paper as follows:
-- The `baseline-<tag>.csv` file contains performance results for
+- The `baseline-<tag>.csv` file contains running-time results for
   the baseline performance of the different systems.  These
   results correspond with Figure 3 in the paper.
-- The `pedigrees-<tag>.csv` file contains performance results for
+- The `pedigrees-<tag>.csv` file contains running-time results for
   the performance of OpenCilk on the non-randomized benchmarks
   when pedigree and DPRNG support is enabled.  These results
   correspond with Figure 4 in the paper.
-- The `dprng-<tag>.csv` file contains performance results for
+- The `dprng-<tag>.csv` file contains running-time results for
   the performance of OpenCilk and Cilk Plus on randomized
   benchmarks using different DPRNGs.  These results correspond
   with Figure 5 in the paper.
-- The `cilkscale-compare-<tag>.csv` file contains performance
+- The `cilkscale-compare-<tag>.csv` file contains running-time
   results on the non-randomized benchmarks of OpenCilk run with
   either the library-based or bitcode-ABI-based Cilkscale tool.
   These results correspond with Figure 6 in the paper.
 
 In these CSV files, rows identify different programs, and columns
-generally identify the system (e.g., Cilk Plus or OpenCilk) and
+generally identify a system (e.g., Cilk Plus or OpenCilk) and
 CPU count.  For example, the column heading `opencilk 8` 
 indicates that the running times in that column were produced
 by compiling and running the program using OpenCilk on 8 CPU
@@ -250,40 +294,176 @@ column headings indicate that the programs were compiled and run
 with the library-based or bitcode-ABI-based versions,
 respectively, of Cilkscale.
 
-***TODO: Add examples of valid CSV outputs.***
+The running times reported in these CSVs are measured in seconds
+and are aggregated as the median of the runs of that executable.
 
-# Extensions
+For reference, here are four CSV files generated from our own
+run of `run_tests.py` on an 8-core Intel x86-64 machine (an AWS
+c5.4xlarge instance running Ubuntu 22.04), where `20221117-1533`
+is the run tag:
 
-TODO: Revise this part
+```
+# cat baseline-20221117-1533.csv
+benchmark,serial 1,cilkplus 8,opencilk 8
+cholesky,2.5140000000000002,0.5435000000000001,0.444
+cilksort,8.604,1.058,1.056
+fft,6.3095,0.926,0.893
+heat,5.9295,1.0725,1.0665
+lu,10.748000000000001,1.375,1.357
+matmul,5.51,0.735,0.7444999999999999
+nqueens,2.838,0.3835,0.369
+qsort,4.725,0.92,0.8605
+rectmul,9.367,1.2080000000000002,1.1789999999999998
+strassen,9.0515,1.3715000000000002,1.3695
+BFS_main,0.6417925,0.0770275,0.077985
+KCore_main,11.91,2.17189,2.047855
+Triangle_main,140.7875,18.2574,18.1432
+PageRank_main,95.18645000000001,10.785,9.884599999999999
+minife,41.36465,18.32025,16.9011
+```
+
+```
+# cat pedigrees-20221117-1533.csv
+benchmark,opencilk 8
+cholesky,0.4885
+cilksort,1.0575
+fft,0.9165000000000001
+heat,1.0705
+lu,1.3645
+matmul,0.736
+nqueens,0.373
+qsort,0.902
+rectmul,1.1844999999999999
+strassen,1.362
+BFS_main,0.079593
+KCore_main,2.076575
+Triangle_main,18.20395
+PageRank_main,10.204215
+minife,16.9366
+```
+
+```
+# cat dprng-20221117-1533.csv
+benchmark,cilkplus dotmix 8,opencilk builtin 8,opencilk dotmix 8
+pi,1.971,0.5274985000000001,1.6766999999999999
+fib_rng,2.4654100000000003,0.707068,2.52131
+MaximalIndependentSet_main,0.5498185,0.540934,0.563748
+SpanningForest_main,0.40091350000000003,0.4056925,0.406244
+```
+
+```
+# cat cilkscale-compare-20221117-1533.csv
+benchmark,opencilk cilkscale 8,opencilk cilkscale-bitcode 8
+cholesky,2.7885,2.567
+cilksort,1.129,1.1155
+fft,2.2300000000000004,2.1275
+heat,1.086,1.081
+lu,1.595,1.5705
+matmul,0.7795000000000001,0.7685
+nqueens,0.6935,0.6845000000000001
+qsort,2.9705,2.7615
+rectmul,1.529,1.493
+strassen,1.3755,1.3775
+BFS_main,0.087335,0.081406
+KCore_main,2.4726850000000002,2.36709
+Triangle_main,18.047150000000002,17.5631
+PageRank_main,19.81455,18.81205
+minife,17.30935,16.98815
+```
+
+# Additional information
+
+This section describes additional features of the OpenCilk artifact
+and the `run_tests.py` script, including information on how to use
+OpenCilk manually and how to modify the `run_tests.py` script to run
+additional tests.
+
+## Verbose output of `run_tests.py`
+
+The `run_tests.py` script will save, within the `rawdata`
+subdirectory, the verbose output of building the benchmark programs
+as well as the performance results of each run.  The build output
+will be written to `./rawdata/build-<tag>.out`, and raw
+performance data will be written to CSV files within `rawdata`
+named with the test suite, program, system, and run tag.
 
 ## Using OpenCilk directly
 
-Note: The source code for OpenCilk is available in
-`/usr/local/src/opencilk`, if you would like to examine it.
+You can use the OpenCilk installation at `/opt/opencilk` within
+the Docker image directly to compile and run a Cilk program.  To
+compile and link a Cilk program, run the OpenCilk `clang` or
+`clang++` binary within `/opt/opencilk/bin` --- for Cilk code
+based on C or C++ code, respectively --- and pass it the
+`-fopencilk` flag.  The `-fopencilk` flag should be used both
+when compiling and linking.  For example, here is how you can
+compile the `cholesky` benchmark in the Cilk-5 suite, on the
+Docker image under `/usr/local/src/ppopp-23-ae/cilk5`:
 
-## Adding more tests to run
+```console
+cd cilk5
+/opt/opencilk/bin/clang -O3 -fopencilk -c cilk5/cholesky.c
+/opt/opencilk/bin/clang -O3 -fopencilk -c cilk5/getoptions.c
+/opt/opencilk/bin/clang -fopencilk cholesky.o getoptions.o -o cholesky
+```
 
-You can add a new application to an existing test suite as follows.
+### Using OpenCilk with Cilk Plus, DPRNG support, or Cilkscale
+
+You can also use the same OpenCilk binaries to compile Cilk
+programs with the Cilk Plus runtime system or with different
+extensions:
+- To compile a Cilk program to use the Cilk Plus runtime system,
+  pass `-fcilkplus` to the `clang` or `clang++` binary, instead of
+  `-fopencilk`, when compiling and linking.  You will also need to
+  pass `-I` and `-L` flags to the binary to identify the include
+  and lib directories for the Cilk Plus installation, which is
+  located at `/opt/cilkrts/` within the Docker image.
+- To enable pedigree and DPRNG support within the OpenCilk runtime
+  system, link the program with the additional `-lopencilk-pedigrees`
+  flag (in addition to the `-fopencilk` flag).
+- To use the library version of Cilkscale, compile and link the
+  Cilk program with both `-fopencilk` and `-fcilktool=cilkscale`.
+  To use the bitcode-ABI version of Cilkscale, when compiling the
+  Cilk program, pass the additional flags
+  `-mllvm -csi-tool-bitcode=/opt/opencilk/lib/clang/14.0.6/lib/x86_64-unknown-linux-gnu/libcilkscale.bc`.
+
+You can find examples of all of these different uses of OpenCilk
+in the raw build output from `run_tests.py`, at
+`./rawdata/build-<tag>.out`.
+
+## Examining OpenCilk source
+
+The source code for OpenCilk is available within the Docker image
+at `/usr/local/src/opencilk`, if you would like to examine it.  You
+can also find the source code for this version of OpenCilk archived
+here: <https://doi.org/10.5281/zenodo.7336106>.
+
+## Adding more tests for `run_tests.py` to run
+
+You can add a new application to an existing test suite by modifying
+`run_tests.py` as follows.
 
 - To run additional GBBS tests, add the GBBS test to either
   `all_gbbs_progs`, if the GBBS test is not randomized, or
   `all_rng_gbbs_progs`, if the test is randomized.  Note that, in
   these lists, the `//benchmarks` prefix on the benchmark name is
-  elided.
+  elided.  See the [GBBS repository](https://github.com/ParAlg/gbbs/tree/3491d548a3584b6a8f2ce9f90f0dc674c6e58c48)
+  for more information on the available GBBS tests.
 
-- For a brand-new (non-randomized) Cilk program built using Make, add
-  the Cilk program to the `cilk5` subdirectory, update the Makefile
-  therein to build that program, and then add the name of that
-  program to the `all_cilk5_progs` list at the top of `run_tests.py`.
-
-# Additional information
-
-The `run_tests.py` script will save within the `./rawdata` subdirectory
-the verbose output of building the benchmark programs as well as the
-performance results of each run.  The build output will be 
-written to `./rawdata/build-<tag>.out`, and the raw performance data
-for a given program run will be written to a CSV in `./rawdata`
-named with the test suite, program, system, and run tag.
+- You can add a simple Cilk program to the test
+  suite by adding the program to the `cilk5` directory and 
+  updating the `Makefile` therein.  In particular, for a Cilk
+  program that is implemented in a single source file, add the
+  source code of that Cilk program to the `cilk5`
+  subdirectory and add the name of the program to `ALL_TESTS`
+  at the start of `cilk5/Makefile`.  (For more complicated Cilk
+  programs, you will need to modify `cilk5/Makefile` appropriately
+  to compile the program, using the standard variables `$(CC)`
+  `$(CXX)`, `$(CFLAGS)` and `$(LDFLAGS)` to compile and link the
+  program.) Then, modify the `all_cilk5_progs` list at the start of
+  `run_tests.py` to include the name of the new program.  Note that
+  `run_tests.py` --- specifically, the `parse_cilk5_output` function
+  --- expects to the program to report its running time as
+  floating-point number alone on a line printed to to stdout.
 
 ## Build warnings that are safe to ignore
 
@@ -331,63 +511,3 @@ When compiling and running GBBS (randomized or non-randomized) benchmarks:
     warning: variable 'reachable' set but not used
 
     warning: unused variable 'rand_pos'
-
-
---------
-Old content
-
-***Note:*** We cannot guarantee that you will get exactly the same
-performance results as in the paper if you do not run on the same
-hardware.  However, you should observe similar trends to the
-performance results highlighted in the paper, e.g., that the OpenCilk
-runtime system outperforms the Cilk Plus runtime system.
-
-The full set of application tests take a significant amount of time to
-run.  Here are some ways to test the artifact more quickly:
-
-- *Run fewer trials.*  For example, pass `-t 3` to `run_tests.py`,
-  instead of `-t 20`, to run only 3 trials per executable.
-
-- *Run parallel codes only in parallel.*  This is the default behavior
-  if the `-c` flag is not specified to the script.
-
-- *Use small inputs.* Pass `-s` to `run_tests.py` to instruct it to
-   use small inputs for all tests.
-
-- *Skip the GBBS test suites.* These test suites take a particularly
-  long time to compile and run.  To run all other test suites, pass
-  `-u cilk5,minife,random` to `run_tests.py`.
-
-- *Run a subset of the experiments.* Use the `-x` flag to select which
-   experiments to run.  For example, passing `-x baseline,pedigrees`
-   to `run_tests.py` will run only the baseline and pedigree
-   performance tests, which correspond with Figures 3 and 4,
-   respectively.
-
-- *Run only select programs.* Use the `--programs` flag to specify a
-   list of benchmark programs to run.  Note that the corresponding
-   test suites and experiments must be enabled for each of these
-   programs to run.
-
-Each CSV file is tagged with the date, hour, and minute when
-`run_tests.py` was invoked.  The tag may be prefixed with `small` if
-small inputs were used.  The CSV files correspond with the figures in
-Section 4 of the paper as follows:
-
-- The file `baseline-<tag>.csv` presents the baseline performance
-  measurements for the non-randomized benchmark programs.  These
-  results correspond with Figure 3.
-
-- The file `pedigrees-<tag>.csv` presents the performance results on
-  the non-randomized benchmark programs with DPRNG support is enabled.
-  These results correspond with Figure 4.
-
-- The file `dprng-<tag>.csv` presents the performance results on the
-  randomized benchmarks.  These results correspond with Figure 5.
-
-- The file `cilkscale-compare-<tag>.csv` presents the performance
-  comparison between the two versions of the Cilkscale scalability
-  analyzer --- one of which, labeled `cilkscale`, is implemented as a
-  standard library, the other, labeled `cilkscale-bitcode` is
-  implemented using a bitcode-ABI file.  These results correspond with
-  Figure 6.
