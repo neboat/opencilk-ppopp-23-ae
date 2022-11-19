@@ -23,14 +23,14 @@ this Docker image with precompiled binaries to facilitate the
 evaluation.  These binaries have been compiled for modern x86-64
 processors.
 
-The OpenCilk source code for this artifact is archived here:
+The OpenCilk source code for this artifact, including its LLVM-based
+compiler, runtime system, and productivity tools, is archived here:
 <https://doi.org/10.5281/zenodo.7336106>.
-For reference, a copy of the source code for OpenCilk, including
-its LLVM-based compiler, runtime system, and productivity tools,
-can be found at `/usr/local/src/opencilk` within the Docker image.
+For reference, a copy of the source code can also be found at
+`/usr/local/src/opencilk` within the Docker image.
 
 For convenience, this README file is also available online,
-with the Markdown rendered, from
+with the Markdown rendered, at
 <https://github.com/neboat/opencilk-ppopp-23-ae/blob/main/README.md>.
 
 # Getting started guide
@@ -40,7 +40,7 @@ image for the artifact evaluation and verifying that it runs as
 intended on your system.
 
 *Prerequisites:* These instructions assume you are using a modern
-multicore x86-64 machine running a recent version of Linux and that
+multicore x86-64 machine running a recent version of Linux that
 has Docker installed.  In particular, the Docker image has been
 tested on x86-64 machines running recent versions of Linux, such
 as Ubuntu 22.04, and Docker version 20.10.21.  You can find
@@ -100,21 +100,20 @@ These instructions will guide you through using the Docker image to
 evaluate the artifact by rerunning the experiments for the empirical 
 evaluation of the paper (Section 4).  In particular, these steps will
 produce four CSV files that are analogous to Figures 3-6 in Section 4.
-
 Although we cannot guarantee that you can exactly replicate the running
 times presented in the paper --- due to differences in computer
 hardware and system configuration --- you can use this artifact to 
 replicate the following results:
 - *OpenCilk functionality:* OpenCilk supports compiling and running a
   variety of Cilk programs using either the Cilk Plus or OpenCilk 
-  runtime systems.  OpenCilk also supports the use of tools such as
-  the Cilkscale scalability analyzer to analyze task-parallel program
+  runtime systems.  OpenCilk also supports the use of tools, such as
+  the Cilkscale scalability analyzer, to analyze task-parallel program
   execution.
 - *Figure 3 performance trend:* Across the non-randomized benchmarks,
   the baseline performance of OpenCilk --- without pedigree and DPRNG
   support enabled and without any tool, such as Cilkscale, enabled ---
-  is typically faster than that of Cilk Plus.  In particular, the
-  parallel running times of these benchmarks is typically better when
+  is typically equal to or faster than that of Cilk Plus.  In particular,
+  the parallel running times of these benchmarks is often better when
   using OpenCik, compared to Cilk Plus.
 - *Figure 4 performance trend:* Across the non-randomized benchmarks,
   OpenCik runs efficiently with pedigree and DPRNG support enabled,
@@ -122,9 +121,9 @@ replicate the following results:
   baseline performance and often outperforming Cilk Plus.
 - *Figure 5 performance trend:* On the randomized benchmarks, OpenCilk
   supports efficient use of the DotMix deterministic parallel random-
-  number generator (DPRNG), often outperforming Cilk Plus using DotMix.
-  In addition, these benchmarks typically run faster when using
-  OpenCilk's builtin DPRNG rather than DotMix.
+  number generator (DPRNG), often matching or exceeding the performance
+  of Cilk Plus using DotMix.  In addition, these benchmarks typically
+  run faster when using OpenCilk's builtin DPRNG rather than DotMix.
 - *Figure 6 performance trend:* On the non-randomized benchmarks, the
   bitcode-ABI version of Cilkscale typically runs faster than the
   library version of Cilkscale.
@@ -138,7 +137,7 @@ python3 ./run_tests.py
 ```
 
 2. Copy the CSV files with aggregate results out of the Docker
-   container, e.g., by running commands like the following outside of
+   container, such as by running commands like the following outside of
    the Docker container, replacing `<tag>` with the run tag reported
    by `run_tests.py`:
 
@@ -247,10 +246,10 @@ include the keyword `small`.  On completion, `run_tests.py`
 reports the run tag for its run.
 
 You can copy the CSV files produced by `run_tests.py` out of
-the Docker container using the `docker cp` command outside of the
-container.  For example, running the following commands outside of the
-Docker container --- replacing `<tag>` with the run tag --- will copy
-the four CSV files with aggregated performance results out:
+the Docker container using the `docker cp` command.  For example,
+running the following commands outside of the Docker container
+--- replacing `<tag>` with the run tag --- will copy the four
+CSV files with aggregated performance results out:
 
 ```console
 docker cp `docker ps -alq`:/usr/local/src/ppopp-23-ae/baseline-<tag>.csv .
@@ -291,15 +290,14 @@ generally identify a system (e.g., Cilk Plus or OpenCilk) and
 CPU count.  For example, the column heading `opencilk 8` 
 indicates that the running times in that column were produced
 by compiling and running the program using OpenCilk on 8 CPU
-cores.  The column heading `serial 1` denoes executions of the 
-serial projection of the Cilk program --- in which all Cilk
-keywords are replaced with their serial C/C++ equivalents --- on 1
-CPU core.  In the `dprng-<tag>.csv` file, the column headings also
-identify the DPRNG used.  In the `cilkscale-compare-<tag>.csv`
-file, the keywords `cilkscale` and `cilkscale-bitcode` in the
-column headings indicate that the programs were compiled and run
-with the library-based or bitcode-ABI-based versions,
-respectively, of Cilkscale.
+cores.  The column heading `serial 1` denotes executions on 1 CPU
+core of the serial projection of the Cilk program, in which all Cilk
+keywords are replaced with their serial C/C++ equivalents.  In the
+`dprng-<tag>.csv` file, the column headings also identify the DPRNG
+used.  In the `cilkscale-compare-<tag>.csv` file, the keywords
+`cilkscale` and `cilkscale-bitcode` in the column headings indicate
+that the programs were compiled and run with the library-based or
+bitcode-ABI-based versions, respectively, of Cilkscale.
 
 The running times reported in these CSVs are measured in seconds
 and are aggregated as the median of the runs of that executable.
@@ -391,24 +389,12 @@ additional tests.  While this information is not strictly needed to
 replicate the empirical results, it may be of interest for reusing
 the artifact.
 
-## Generating an additional aggregate CSV file
-
-Near the end of `run_tests.py` is commented-out code to generate a
-CSV file, named `pedigrees-compare-<tag>.csv`, that compares the
-performance if OpenCilk with pedigree and DPRNG support enabled
-against the baseline performance of OpenCilk and Cilk Plus.  This
-CSV combines the results in the `baseline-<tag>.csv` and
-`pedigrees-<tag>.csv` files.  Although this CSV file does not
-directly correspond with a figure in the paper, reviewers may find
-this CSV file helpful to review, and should feel free to uncomment
-this code to generate this CSV file.
-
 ## Verbose output of `run_tests.py`
 
 The `run_tests.py` script will save, within the `rawdata`
 subdirectory, the verbose output of building the benchmark programs
 as well as the performance results of each run.  The build output
-will be written to `./rawdata/build-<tag>.out`, and raw
+will be written to `rawdata/build-<tag>.out`, and raw
 performance data will be written to CSV files within `rawdata`
 named with the test suite, program, system, and run tag.
 
@@ -459,12 +445,17 @@ You can find examples of all of these different uses of OpenCilk
 in the raw build output from `run_tests.py`, at
 `./rawdata/build-<tag>.out`.
 
-## Examining OpenCilk source
+## Generating an additional aggregate CSV file
 
-The source code for OpenCilk is available within the Docker image
-at `/usr/local/src/opencilk`.  The source code for this version of
-OpenCilk is also archived here:
-<https://doi.org/10.5281/zenodo.7336106>.
+Near the end of `run_tests.py` is commented-out code to generate a
+CSV file, named `pedigrees-compare-<tag>.csv`, that compares the
+performance if OpenCilk with pedigree and DPRNG support enabled
+against the baseline performance of OpenCilk and Cilk Plus.  This
+CSV combines the results in the `baseline-<tag>.csv` and
+`pedigrees-<tag>.csv` files.  Although this CSV file does not
+directly correspond with a figure in the paper, reviewers may find
+this CSV file helpful to review, and should feel free to uncomment
+this code to generate this CSV file.
 
 ## Adding more tests for `run_tests.py` to run
 
