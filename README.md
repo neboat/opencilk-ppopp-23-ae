@@ -3,9 +3,9 @@
 This document describes how to evaluate the artifact for the PPoPP
 2023 paper submission, "NAC: A Modular and Extensible Software
 Infrastructure for Fast Task-Parallel Code."  This evaluation supports
-assessment of the functionality and reusability of the artifact (red
-badge) and validation of the results of the empirical evaluation,
-in Section 4 of the paper (blue badge).
+assessment of the functionality and reusability of the artifact and
+validation of the results of the empirical evaluation, in Section 4
+of the paper.
 
 Throughout this document and the artifact, the paper's anonymized
 names for the system and its components have been deanonymized.
@@ -17,17 +17,17 @@ names for the system and its components have been deanonymized.
 This artifact consists of a Docker image containing precompiled
 binaries for OpenCilk as well as source code for all
 benchmark programs used in the empirical evaluation of the paper.
-The OpenCilk source code is archived here:
-<https://doi.org/10.5281/zenodo.7336106>.
-But building OpenCilk from source is a time-consuming and
+Building OpenCilk from source is a time-consuming and
 computing-resource-intensive process.  Therefore, we are providing
 this Docker image with precompiled binaries to facilitate the
-evaluation.  These binaries have been compiled for modern Intel
-x86-64 processors.
+evaluation.  These binaries have been compiled for modern x86-64
+processors.
 
-For reference, the source code for OpenCilk, including the
-compiler, runtime system, and tools, can be found at
-`/usr/local/src/opencilk` within the Docker image.
+The OpenCilk source code for this artifact is archived here:
+<https://doi.org/10.5281/zenodo.7336106>.
+For reference, a copy of the source code for OpenCilk, including
+its LLVM-based compiler, runtime system, and productivity tools,
+can be found at `/usr/local/src/opencilk` within the Docker image.
 
 # Getting started guide
 
@@ -133,10 +133,10 @@ steps:
 python3 ./run_tests.py
 ```
 
-2. Copy the aggregate CSV files out of the Docker container, e.g.,
-   by running commands like the following outside of the Docker
-   container, replacing `<tag>` with the run tag reported by
-   `run_tests.py`.
+2. Copy the CSV files with aggregate results out of the Docker
+   container, e.g., by running commands like the following outside of
+   the Docker container, replacing `<tag>` with the run tag reported
+   by `run_tests.py`:
 
 ```console
 docker cp `docker ps -alq`:/usr/local/src/ppopp-23-ae/baseline-<tag>.csv .
@@ -152,7 +152,7 @@ The following sections describe these high-level steps in detail.
 
 ## Running `run_tests.py`
 
-You can run all of the benchmark applications for the experiments
+You can run all of the benchmark programs for the experiments
 described in the paper simply by running `run_tests.py` as follows:
 
 ```console
@@ -162,13 +162,13 @@ python3 ./run_tests.py
 Running `run_tests.py` without any command-line arguments
 will run all benchmark programs 10 times each and run the
 parallel executables only on the number of CPU cores on the system
-(excluding hyperthreads).  Although this default behavior does not
+(excluding hyperthreads/SMT).  Although this default behavior does not
 match the experimental setup used in the paper, it runs the
-empirical tests more quickly in a manner that still supports
+empirical tests more quickly in a manner that nonetheless supports
 evaluation of the artifact.  Running `run_tests.py` with these default
 parameters takes approximately 2.5 hours on a modern Intel x86-64
-system with 8 processor cores (specifically, an AWS c5.4xlarge
-instance).
+system with 8 processor cores and 32GB of RAM (specifically, an AWS
+c5.4xlarge instance).
 
 The `run_tests.py` script accepts a variety of options to run
 the empirical evaluation in different configurations, in order
@@ -179,14 +179,14 @@ gives an overview of the options that `run_tests.py` accepts:
 python3 ./run_tests.py -h
 ```
 
-Section 4 describes the system configuration and parameters used for
-the paper's empirical evaluation, including the number of times each
-executable was run (20) and the numbers of CPU processor cores each
-parallel executable was tested on (1, 24, and 48).  If you have
-**ample time** --- several hours --- **and computer resources**
---- at least 48 CPU processor cores --- you can use the
-`run_tests.py` script to run the tests using these parameters as
-follows:
+Section 4 of the paper describes the system configuration and 
+parameters used for the paper's empirical evaluation, including
+the number of times each executable was run (20) and the numbers
+of CPU processor cores each parallel executable was tested on
+(1, 24, and 48).  If you have **ample time** --- several hours
+--- **and computing resources** --- at least 48 CPU processor
+cores --- you can use the `run_tests.py` script to run the tests
+using these parameters as follows:
 
  ```console
  python3 ./run_tests.py -t 20 -c 1,24,48
@@ -230,7 +230,7 @@ There are several ways to run the application tests more quickly.
   running the executables with too few trials, as doing so will
   increase the variability of the aggregated results.
 
-## Getting the CSV files
+## Getting the CSV files with aggreagted results
 
 When the `run_tests.py` script is run to perform all experiments, it 
 will generate four CSV files containing aggregated performance results
@@ -239,14 +239,14 @@ for those experiments: `baseline-<tag>.csv`, `pedigrees-<tag>.csv`,
 filenames, `<tag>` denotes a ***run tag***, which identifies the run
 by the year, month, day, hour, and minute of the invocation of
 `run_tests.py`.  If small inputs are used, the run tag will also 
-include the keyword `small`.  On completion, the `run_tests.py` script
-will report the tag for its run.
+include the keyword `small`.  On completion, `run_tests.py`
+reports the run tag for its run.
 
 You can copy the CSV files produced by `run_tests.py` out of
 the Docker container using the `docker cp` command outside of the
-container. For example, running the following commands outside of the
-Docker container will copy the four CSV files with aggregated
-performance results out, replacing `<tag>` with the run tag:
+container.  For example, running the following commands outside of the
+Docker container --- replacing `<tag>` with the run tag --- will copy
+the four CSV files with aggregated performance results out:
 
 ```console
 docker cp `docker ps -alq`:/usr/local/src/ppopp-23-ae/baseline-<tag>.csv .
@@ -287,7 +287,10 @@ generally identify a system (e.g., Cilk Plus or OpenCilk) and
 CPU count.  For example, the column heading `opencilk 8` 
 indicates that the running times in that column were produced
 by compiling and running the program using OpenCilk on 8 CPU
-cores.  In the `dprng-<tag>.csv` file, the column headings also
+cores.  The column heading `serial 1` denoes executions of the 
+serial projection of the Cilk program --- in which all Cilk
+keywords are replaced with their serial C/C++ equivalents --- on 1
+CPU core.  In the `dprng-<tag>.csv` file, the column headings also
 identify the DPRNG used.  In the `cilkscale-compare-<tag>.csv`
 file, the keywords `cilkscale` and `cilkscale-bitcode` in the
 column headings indicate that the programs were compiled and run
@@ -302,6 +305,7 @@ run of `run_tests.py` on an 8-core Intel x86-64 machine (an AWS
 c5.4xlarge instance running Ubuntu 22.04), where `20221117-1533`
 is the run tag:
 
+**An example `baseline-<tag>.csv` file:**
 ```
 # cat baseline-20221117-1533.csv
 benchmark,serial 1,cilkplus 8,opencilk 8
@@ -322,6 +326,7 @@ PageRank_main,95.18645000000001,10.785,9.884599999999999
 minife,41.36465,18.32025,16.9011
 ```
 
+**An example `pedigrees-<tag>.csv` file:**
 ```
 # cat pedigrees-20221117-1533.csv
 benchmark,opencilk 8
@@ -342,6 +347,7 @@ PageRank_main,10.204215
 minife,16.9366
 ```
 
+**An example `dprng-<tag>.csv` file:**
 ```
 # cat dprng-20221117-1533.csv
 benchmark,cilkplus dotmix 8,opencilk builtin 8,opencilk dotmix 8
@@ -351,6 +357,7 @@ MaximalIndependentSet_main,0.5498185,0.540934,0.563748
 SpanningForest_main,0.40091350000000003,0.4056925,0.406244
 ```
 
+**An example `cilkscale-compare-<tag>.csv` file:**
 ```
 # cat cilkscale-compare-20221117-1533.csv
 benchmark,opencilk cilkscale 8,opencilk cilkscale-bitcode 8
@@ -376,7 +383,21 @@ minife,17.30935,16.98815
 This section describes additional features of the OpenCilk artifact
 and the `run_tests.py` script, including information on how to use
 OpenCilk manually and how to modify the `run_tests.py` script to run
-additional tests.
+additional tests.  While this information is not strictly needed to
+replicate the empirical results, it may be of interest for reusing
+the artifact.
+
+## Generating an additional aggregate CSV file
+
+Near the end of `run_tests.py` is commented-out code to generate a
+CSV file, named `pedigrees-compare-<tag>.csv`, that compares the
+performance if OpenCilk with pedigree and DPRNG support enabled
+against the baseline performance of OpenCilk and Cilk Plus.  This
+CSV combines the results in the `baseline-<tag>.csv` and
+`pedigrees-<tag>.csv` files.  Although this CSV file does not
+directly correspond with a figure in the paper, reviewers may find
+this CSV file helpful to review, and should feel free to uncomment
+this code to generate this CSV file.
 
 ## Verbose output of `run_tests.py`
 
@@ -406,6 +427,10 @@ cd cilk5
 /opt/opencilk/bin/clang -fopencilk cholesky.o getoptions.o -o cholesky
 ```
 
+Once the executable is compiled and linked with the appropriate
+flags, running the executable normally will automatically use
+OpenCilk.
+
 ### Using OpenCilk with Cilk Plus, DPRNG support, or Cilkscale
 
 You can also use the same OpenCilk binaries to compile Cilk
@@ -433,9 +458,9 @@ in the raw build output from `run_tests.py`, at
 ## Examining OpenCilk source
 
 The source code for OpenCilk is available within the Docker image
-at `/usr/local/src/opencilk`, if you would like to examine it.  You
-can also find the source code for this version of OpenCilk archived
-here: <https://doi.org/10.5281/zenodo.7336106>.
+at `/usr/local/src/opencilk`.  The source code for this version of
+OpenCilk is also archived here:
+<https://doi.org/10.5281/zenodo.7336106>.
 
 ## Adding more tests for `run_tests.py` to run
 
@@ -459,11 +484,11 @@ You can add a new application to an existing test suite by modifying
   programs, you will need to modify `cilk5/Makefile` appropriately
   to compile the program, using the standard variables `$(CC)`
   `$(CXX)`, `$(CFLAGS)` and `$(LDFLAGS)` to compile and link the
-  program.) Then, modify the `all_cilk5_progs` list at the start of
+  program.)  Then, modify the `all_cilk5_progs` list at the start of
   `run_tests.py` to include the name of the new program.  Note that
   `run_tests.py` --- specifically, the `parse_cilk5_output` function
   --- expects to the program to report its running time as
-  floating-point number alone on a line printed to to stdout.
+  floating-point number alone on a line printed to stdout.
 
 ## Build warnings that are safe to ignore
 
