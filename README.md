@@ -29,6 +29,10 @@ For reference, a copy of the source code for OpenCilk, including
 its LLVM-based compiler, runtime system, and productivity tools,
 can be found at `/usr/local/src/opencilk` within the Docker image.
 
+For convenience, this README file is also available online,
+with the Markdown rendered, from
+<https://github.com/neboat/opencilk-ppopp-23-ae/blob/main/README.md>.
+
 # Getting started guide
 
 The following steps will guide you through setting up the Docker
