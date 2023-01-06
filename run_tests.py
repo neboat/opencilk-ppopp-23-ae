@@ -52,7 +52,7 @@ all_test_suites = ['cilk5','gbbs','minife','random','gbbs-random']
 # - 'serial' - Compile and run the serial projection of the given Cilk code
 # - 'cilkplus' - Compile and run the Cilk code with Intel Cilk Plus
 # - 'opencilk' - Compile and run the Cilk code with OpenCilk
-all_systems = ['serial','cilkplus','opencilk']
+all_systems = ['serial','cilkplus','opencilk','openmp','tbb']
 
 # Experiments:
 # - 'baseline' - Measure baseline performance of different systems.
@@ -99,7 +99,7 @@ def runcmd(subProcCommand):
 
     proc.wait()
     if proc.returncode != 0:
-        raise CalledProcessError()
+        raise subprocess.CalledProcessError(proc.returncode, subProcCommand)
 
 ###########################################################################
 ### Methods for configuring different builds
@@ -112,6 +112,8 @@ def make_sysflag(sys):
         case "opencilk": return ""
         case "cilkplus": return "CILKPLUS=1"
         case "serial": return "SERIAL=1"
+        case "openmp": return "OPENMP=1"
+        case "tbb": return "TBB=1"
         case _: raise ValueError("Unrecognized system "+sys)
 
 # Get extra Makefile CFLAGS to enable Cilkscale
@@ -172,7 +174,7 @@ def sys_exp_compatible(sys, exp):
 # Returns True if the given system-dprng pair is valid to test, False
 # otherwise.
 def sys_dprng_compatible(sys, dprng):
-    if sys == "serial":
+    if sys == "serial" or sys == "openmp" or sys == "tbb":
         return False
     if dprng == "builtin" and sys != "opencilk":
         return False
@@ -192,6 +194,8 @@ def set_bazel_sysconfig(sys):
             os.environ['CPLUS_INCLUDE_PATH'] = os.path.join(cilkrts_dir,"include")
             return "--config=cilkplus"
         case "serial": return "--config=serial"
+        case "openmp": return "--config=omptask"
+        case "tbb": return "--config=tbbtask"
         case _: raise ValueError("Unrecognized system "+sys)
 
 # Undo configuration for bazel to build for a particular system.
@@ -685,7 +689,7 @@ def run_randbench_tests(systems, small_inputs, trials, cpu_counts, csv_tag,
                         accum_data, prog_run, sys_run, programs=all_randbench_progs):
     # Iterate over the systems to run.
     for sys in systems:
-        if sys == "serial":
+        if sys == "serial" or sys == "openmp" or sys == "tbb":
             continue
         # Build the tests
         build_randbench(sys)
@@ -828,6 +832,7 @@ def main():
     # Also record if we're using small inputs in the tag.
     if small_inputs:
         csv_tag = "small-"+csv_tag
+    print("Tests starting.  Run tag: {}.".format(csv_tag))
 
     # Ensure there is a directory for raw data.
     if not os.path.exists(rawdata_dir):

@@ -853,7 +853,17 @@ int main(int argc, char *argv[]) {
   struct timeval t1, t2;
   gettimeofday(&t1,0);
 
+#ifdef OMPTASK
+#pragma omp parallel
+  {
+    #pragma omp single
+    {
+#endif
   strassen(n, A, n, B, n, C, n);
+#ifdef OMPTASK
+    }
+  }
+#endif
 
   gettimeofday(&t2,0);
   unsigned long long runtime_ms = (todval(&t2)-todval(&t1))/1000;

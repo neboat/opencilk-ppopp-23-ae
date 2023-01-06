@@ -436,7 +436,17 @@ int run(long x, long y, long z, int check) {
   struct timeval t1, t2;
   gettimeofday(&t1,0);
 
+#ifdef OMPTASK
+#pragma omp parallel
+  {
+    #pragma omp single
+    {
+#endif
   flops = multiply_matrix(A,y,B,z,x,y,z,R,z,0);
+#ifdef OMPTASK
+    }
+  }
+#endif
 
   gettimeofday(&t2,0);
   unsigned long long runtime_ms = (todval(&t2)-todval(&t1))/1000;

@@ -9,6 +9,11 @@
 
 #ifdef SERIAL
 #include <cilk/cilk_stub.h>
+#elifdef OMPTASK
+#include <omp.h>
+#elifdef TBBTASK
+extern "C" int __rts_get_num_workers();
+extern "C" int __rts_get_worker_id();
 #endif
 
 namespace parlay {
@@ -17,7 +22,19 @@ namespace parlay {
 
 #ifdef SERIAL
 inline size_t num_workers() { return 1; }
-inline size_t worker_id() { return 0; }
+inline size_t worker_id() {
+  return 0;
+}
+#elifdef OMPTASK
+inline size_t num_workers() { return omp_get_num_threads(); }
+inline size_t worker_id() {
+  return omp_get_thread_num();
+}
+#elifdef TBBTASK
+inline size_t num_workers() { return __rts_get_num_workers(); }
+inline size_t worker_id() {
+  return __rts_get_worker_id();
+}
 #else
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"

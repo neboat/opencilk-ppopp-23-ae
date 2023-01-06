@@ -949,16 +949,36 @@ again:
     A = set_matrix (depth, A, i, i, 1.0);
   }
 
+#ifdef OMPTASK
+#pragma omp parallel
+  {
+    #pragma omp single
+    {
+#endif
   R = copy_matrix (depth, A);
+#ifdef OMPTASK
+    }
+  }
+#endif
 
   input_blocks = num_blocks (depth, R);
   input_nonzeros = num_nonzeros (depth, R);
 
   struct timeval t1, t2;
   gettimeofday(&t1,0);
+#ifdef OMPTASK
+#pragma omp parallel
+  {
+    #pragma omp single
+    {
+#endif
 
   R = cholesky (depth, R);
 
+#ifdef OMPTASK
+    }
+  }
+#endif
   gettimeofday(&t2,0);
   unsigned long long runtime_ms = (todval(&t2)-todval(&t1))/1000;
   printf("%f\n", runtime_ms/1000.0);

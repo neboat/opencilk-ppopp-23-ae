@@ -8,6 +8,8 @@ CXXFLAGS = -Wall -O3
 LDFLAGS =
 LDLIBS = -ltcmalloc
 
+PRESERVE_ALL_SPAWNS_FLAG = -mllvm -simplifycfg-preserve-all-spawns -mllvm -tasksimplify-preserve-all-spawns
+
 ifeq ($(SERIAL),1)
 	CILKFLAG ?=
 	SERIAL_FLAGS = -DSERIAL
@@ -20,6 +22,14 @@ ifeq ($(CILKPLUS),1)
 	CFLAGS += -I$(CILKPLUS_RTS)/include
 	CILKFLAG = -fcilkplus
 	LDFLAGS = -L$(CILKPLUS_RTS)/lib -Wl,-rpath,$(CILKPLUS_RTS)/lib
+else ifeq ($(OPENMP),1)
+	CFLAGS += -fopencilk -fopenmp -ftapir=omptask -mllvm -omp-bc-path=/usr/local/src/ppopp-23-ae/extra-bitcode-abis/omp-task-rt-abi.bc -DOMPTASK $(PRESERVE_ALL_SPAWNS_FLAG)
+	CXXFLAGS += -fopencilk -fopenmp -ftapir=omptask -mllvm -omp-bc-path=/usr/local/src/ppopp-23-ae/extra-bitcode-abis/omp-task-rt-abi.bc -DOMPTASK $(PRESERVE_ALL_SPAWNS_FLAG)
+	LDFLAGS = -fopenmp
+else ifeq ($(TBB),1)
+	CFLAGS += -fopencilk -ftapir=lambda -mllvm -tapir-runtime-bc-path=/usr/local/src/ppopp-23-ae/extra-bitcode-abis/tbb-bc-abi.bc
+	CXXFLAGS += -fopencilk -ftapir=lambda -mllvm -tapir-runtime-bc-path=/usr/local/src/ppopp-23-ae/extra-bitcode-abis/tbb-bc-abi.bc
+	LDFLAGS = -ltbb -lstdc++
 else
 	CILKFLAG ?= -fopencilk
 endif

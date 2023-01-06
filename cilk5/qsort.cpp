@@ -94,7 +94,17 @@ int qmain(int n) {
   struct timeval t1, t2;
   gettimeofday(&t1,0);
   LIKWID_MARKER_START("sample_qsort");
+#ifdef OMPTASK
+#pragma omp parallel
+  {
+    #pragma omp single
+    {
+#endif
 sample_qsort(a, a + n);
+#ifdef OMPTASK
+    }
+  }
+#endif
  LIKWID_MARKER_STOP("sample_qsort");
     gettimeofday(&t2,0);
     unsigned long long runtime_ms = (todval(&t2)-todval(&t1))/1000;

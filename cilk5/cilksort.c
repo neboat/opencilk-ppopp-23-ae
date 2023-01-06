@@ -502,7 +502,17 @@ int main(int argc, char **argv) {
   struct timeval t1, t2;
   gettimeofday(&t1,0);
   wsp_t start = wsp_getworkspan();
+#ifdef OMPTASK
+#pragma omp parallel
+  {
+    #pragma omp single
+    {
+#endif
   cilksort(array, tmp, size);
+#ifdef OMPTASK
+    }
+  }
+#endif
   wsp_t end = wsp_getworkspan();
   gettimeofday(&t2,0);
   unsigned long long runtime_ms = (todval(&t2)-todval(&t1))/1000;

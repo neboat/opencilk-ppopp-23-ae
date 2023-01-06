@@ -3282,7 +3282,17 @@ void test_correctness(void) {
     }
 
     /* fft-ize */
+#ifdef OMPTASK
+#pragma omp parallel
+  {
+    #pragma omp single
+    {
+#endif
     cilk_fft(n, in1, out1);
+#ifdef OMPTASK
+    }
+  }
+#endif
 
     test_fft(n, in2, out2);
 
@@ -3333,7 +3343,17 @@ void test_speed(long size) {
 
   struct timeval t1, t2;
   gettimeofday(&t1,0);
+#ifdef OMPTASK
+#pragma omp parallel
+  {
+    #pragma omp single
+    {
+#endif
   cilk_fft(size, in, out);
+#ifdef OMPTASK
+    }
+  }
+#endif
   gettimeofday(&t2,0);
   unsigned long long runtime_ms = (todval(&t2)-todval(&t1))/1000;
   printf("%f\n", runtime_ms/1000.0);

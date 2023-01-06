@@ -132,6 +132,48 @@
 /*     }                                                                          \ */
 /*   } */
 
+#ifdef OMPTASK
+/* Macro to generate binary for unweighted graph applications that can ingest
+ * only
+ * either symmetric or asymmetric graph inputs */
+#define generate_main(APP, mutates)                                            \
+  int main(int argc, char *argv[]) {                                           \
+    gbbs::commandLine P(argc, argv, " [-s] <inFile>");                         \
+    char *iFile = P.getArgument(0);                                            \
+    bool symmetric = P.getOptionValue("-s");                                   \
+    bool compressed = P.getOptionValue("-c");                                  \
+    bool binary = P.getOptionValue("-b");                                      \
+    bool mmap = P.getOptionValue("-m");                                        \
+    size_t rounds = P.getOptionLongValue("-rounds", 3);                        \
+    _Pragma("omp parallel") {                                                  \
+      _Pragma("omp single") {                                                  \
+        if (compressed) {                                                      \
+          if (symmetric) {                                                     \
+            auto G =                                                           \
+                gbbs::gbbs_io::read_compressed_symmetric_graph<gbbs::empty>(   \
+                    iFile, mmap);                                              \
+            run_app(G, APP, mutates, rounds)                                   \
+          } else {                                                             \
+            auto G =                                                           \
+                gbbs::gbbs_io::read_compressed_asymmetric_graph<gbbs::empty>(  \
+                    iFile, mmap);                                              \
+            run_app(G, APP, mutates, rounds)                                   \
+          }                                                                    \
+        } else {                                                               \
+          if (symmetric) {                                                     \
+            auto G = gbbs::gbbs_io::read_unweighted_symmetric_graph(           \
+                iFile, mmap, binary);                                          \
+            run_app(G, APP, mutates, rounds)                                   \
+          } else {                                                             \
+            auto G = gbbs::gbbs_io::read_unweighted_asymmetric_graph(          \
+                iFile, mmap, binary);                                          \
+            run_app(G, APP, mutates, rounds)                                   \
+          }                                                                    \
+        }                                                                      \
+      }                                                                        \
+    }                                                                          \
+  }
+#else // OMPTASK
 /* Macro to generate binary for unweighted graph applications that can ingest
  * only
  * either symmetric or asymmetric graph inputs */
@@ -168,6 +210,8 @@
     }                                                                          \
     }									\
   }
+#endif // OMPTASK
+
 
 /* Macro to generate binary for unweighted graph applications that can ingest
  * only asymmetric graph inputs */
@@ -190,6 +234,7 @@
     }                                                                        \
   }
 
+#ifdef OMPTASK
 /* Macro to generate binary for unweighted graph applications that can ingest
  * only
  * symmetric graph inputs */
@@ -209,6 +254,8 @@
       std::cout << "# Please run on a symmetric input." << std::endl;          \
     }                                                                          \
     size_t rounds = P.getOptionLongValue("-rounds", 3);                        \
+    _Pragma("omp parallel") {						\
+      _Pragma("omp single") {						\
     if (compressed) {                                                          \
       auto G = gbbs::gbbs_io::read_compressed_symmetric_graph<gbbs::empty>(    \
           iFile, mmap);                                                        \
@@ -218,7 +265,42 @@
           gbbs::gbbs_io::read_unweighted_symmetric_graph(iFile, mmap, binary); \
       run_app(G, APP, mutates, rounds)                                         \
     }                                                                          \
+      }									\
+    }									\
   }
+#else // OMPTASK
+/* Macro to generate binary for unweighted graph applications that can ingest
+ * only
+ * symmetric graph inputs */
+#define generate_symmetric_main(APP, mutates)                                  \
+  int main(int argc, char* argv[]) {                                           \
+    gbbs::commandLine P(argc, argv, " [-s] <inFile>");                         \
+    char* iFile = P.getArgument(0);                                            \
+    bool symmetric = P.getOptionValue("-s");                                   \
+    bool compressed = P.getOptionValue("-c");                                  \
+    bool mmap = P.getOptionValue("-m");                                        \
+    bool binary = P.getOptionValue("-b");                                      \
+    cilk_scope {							\
+    if (!symmetric) {                                                          \
+      std::cout                                                                \
+          << "# The application expects the input graph to be symmetric (-s "  \
+             "flag)."                                                          \
+          << std::endl;                                                        \
+      std::cout << "# Please run on a symmetric input." << std::endl;          \
+    }                                                                          \
+    size_t rounds = P.getOptionLongValue("-rounds", 3);                        \
+    if (compressed) {                                                          \
+      auto G = gbbs::gbbs_io::read_compressed_symmetric_graph<gbbs::empty>(    \
+          iFile, mmap);                                                        \
+      run_app(G, APP, mutates, rounds)                                         \
+    } else {                                                                   \
+      auto G =                                                                 \
+          gbbs::gbbs_io::read_unweighted_symmetric_graph(iFile, mmap, binary); \
+      run_app(G, APP, mutates, rounds)                                         \
+    }                                                                          \
+    }									\
+  }
+#endif // OMPTASK
 
 /* Macro to generate binary for unweighted graph applications that can ingest
  * only

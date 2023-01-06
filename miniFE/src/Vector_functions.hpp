@@ -50,10 +50,21 @@
 #include <cilk/cilk_stub.h>
 #endif
 
+#define USE_REDUCERS 0
+
+#if USE_REDUCERS
 #ifdef CILKPLUS
 #include <cilk/reducer_opadd.h>
 #else
 #include <cilk/opadd_reducer.h>
+#endif
+#else
+#include <cilk/cilk_api.h>
+#endif // USE_REDUCERS
+
+#if defined(OMPTASK) || defined(TBB)
+extern "C" int __rts_get_num_workers();
+extern "C" int __rts_get_worker_id();
 #endif
 
 namespace miniFE {
@@ -157,9 +168,20 @@ void
   const ScalarType* ycoefs = &y.coefs[0];
         ScalarType* wcoefs = &w.coefs[0];
 
+#ifdef OMPTASK
+#pragma omp parallel
+  {
+    #pragma omp single
+    {
+#endif
   cilk_for(int i = 0; i < n; i++) {
     wcoefs[i] = alpha*xcoefs[i] + beta*ycoefs[i];
   }
+#ifdef OMPTASK
+    }
+  }
+#endif
+
 }
 
 //------------------------------------------------------------
@@ -191,6 +213,12 @@ void
   const ScalarType* const xcoefs = &x.coefs[0];
   	ScalarType* const ycoefs = &y.coefs[0];
 
+#ifdef OMPTASK
+#pragma omp parallel
+  {
+    #pragma omp single
+    {
+#endif
   if(beta == 1 && alpha == 1) {
   	cilk_for(int i = 0; i < n; i++) {
 		ycoefs[i] += xcoefs[i];
@@ -212,6 +240,10 @@ void
 		ycoefs[i] = alpha*xcoefs[i] + beta*ycoefs[i];
   	}
   }
+#ifdef OMPTASK
+    }
+  }
+#endif
 }
 
 //Like waxpby above, except operates on two sets of arguments.
@@ -243,11 +275,28 @@ void
   const ScalarType* y2coefs = &y2.coefs[0];
         ScalarType* w2coefs = &w2.coefs[0];
 
+#ifdef OMPTASK
+#pragma omp parallel
+  {
+    #pragma omp single
+    {
+#endif
   cilk_for(int i=0; i<n; ++i) {
     wcoefs[i] = alpha*xcoefs[i] + beta*ycoefs[i];
     w2coefs[i] = alpha2*x2coefs[i] + beta2*y2coefs[i];
   }
+#ifdef OMPTASK
+    }
+  }
+#endif
 }
+
+#if !USE_REDUCERS
+template<typename Scalar>
+struct Scalar_TLS {
+  Scalar val;
+} __attribute__((aligned(64)));
+#endif
 
 //-----------------------------------------------------------
 //Compute the dot product of two vectors where:
@@ -276,32 +325,91 @@ typename TypeTraits<typename Vector::ScalarType>::magnitude_type
   const Scalar* xcoefs = &x.coefs[0];
   const Scalar* ycoefs = &y.coefs[0];
   //magnitude result = 0;
+#if USE_REDUCERS
 #ifdef CILKPLUS
   cilk::reducer_opadd<Scalar> result_reducer(0);
 #else
   cilk::opadd_reducer<Scalar> result_reducer = 0;
 #endif
+#else
+  Scalar result = 0;
+#endif // USE_REDUCERS
 
-  cilk_for(int i=0; i<n; ++i) {
-    result_reducer += xcoefs[i]*ycoefs[i];
+#ifdef OMPTASK
+#pragma omp parallel
+  {
+    #pragma omp single
+    {
+#endif
+#if !USE_REDUCERS
+#ifndef SERIAL
+#if defined(OMPTASK) || defined(TBB)
+  int num_workers = __rts_get_num_workers();
+#else
+  int num_workers = __cilkrts_get_nworkers();
+#endif
+  Scalar_TLS<Scalar> *result_reducer = new Scalar_TLS<Scalar>[num_workers];
+  for (int i = 0; i < num_workers; ++i) {
+    result_reducer[i].val = 0;
   }
+#else
+  Scalar result_reducer = 0;
+#endif // SERIAL
+#endif // !USE_REDUCERS
+  cilk_for(int i=0; i<n; ++i) {
+#if USE_REDUCERS
+    result_reducer += xcoefs[i]*ycoefs[i];
+#else // USE_REDUCERS
+#ifndef SERIAL
+#if defined(OMPTASK) || defined(TBB)
+    result_reducer[__rts_get_worker_id()].val += xcoefs[i]*ycoefs[i];
+#else
+    result_reducer[__cilkrts_get_worker_number()].val += xcoefs[i]*ycoefs[i];
+#endif
+#else
+    result_reducer += xcoefs[i]*ycoefs[i];
+#endif // SERIAL
+#endif // USE_REDUCERS
+  }
+#if !USE_REDUCERS
+#ifndef SERIAL
+  for (int i = 0; i < num_workers; ++i) {
+    result += result_reducer[i].val;
+  }
+  delete[] result_reducer;
+#else
+  result = result_reducer;
+#endif // SERIAL
+#endif // !USE_REDUCERS
+#ifdef OMPTASK
+    }
+  }
+#endif
 
 #ifdef HAVE_MPI
+#if USE_REDUCERS
 #ifdef CILKPLUS
   magnitude local_dot = result_reducer.get_value(), global_dot = 0;
 #else
   magnitude local_dot = result_reducer, global_dot = 0;
 #endif
+#else
+  magnitude local_dot = result, global_dot = 0;
+#endif // USE_REDUCERS
   MPI_Datatype mpi_dtype = TypeTraits<magnitude>::mpi_type();  
   MPI_Allreduce(&local_dot, &global_dot, 1, mpi_dtype, MPI_SUM, MPI_COMM_WORLD);
   return global_dot;
 #else
+#if USE_REDUCERS
 #ifdef CILKPLUS
   return result_reducer.get_value();
 #else
   return result_reducer;
 #endif // CILKPLUS
-#endif
+#else
+  return result;
+#endif // USE_REDUCERS
+#endif // HAVE_MPI
 }
 
 template<typename Vector>
@@ -321,32 +429,91 @@ typename TypeTraits<typename Vector::ScalarType>::magnitude_type
   typedef typename TypeTraits<typename Vector::ScalarType>::magnitude_type magnitude;
 
   const Scalar* xcoefs = &x.coefs[0];
+#if USE_REDUCERS
 #ifdef CILKPLUS
   cilk::reducer_opadd<Scalar> result_reducer(0);
 #else
   cilk::opadd_reducer<Scalar> result_reducer = 0;
 #endif
+#else
+  Scalar result = 0;
+#endif // USE_REDUCERS
 
-  cilk_for(int i=0; i<n; ++i) {
-    result_reducer += xcoefs[i] * xcoefs[i];
+#ifdef OMPTASK
+#pragma omp parallel
+  {
+    #pragma omp single
+    {
+#endif
+#if !USE_REDUCERS
+#ifndef SERIAL
+#if defined(OMPTASK) || defined(TBB)
+  int num_workers = __rts_get_num_workers();
+#else
+  int num_workers = __cilkrts_get_nworkers();
+#endif
+  Scalar_TLS<Scalar> *result_reducer = new Scalar_TLS<Scalar>[num_workers];
+  for (int i = 0; i < num_workers; ++i) {
+    result_reducer[i].val = 0;
   }
+#else
+  Scalar result_reducer = 0;
+#endif // SERIAL
+#endif // !USE_REDUCERS
+  cilk_for(int i=0; i<n; ++i) {
+#if USE_REDUCERS
+    result_reducer += xcoefs[i] * xcoefs[i];
+#else
+#ifndef SERIAL
+#if defined(OMPTASK) || defined(TBB)
+    result_reducer[__rts_get_worker_id()].val += xcoefs[i] * xcoefs[i];
+#else
+    result_reducer[__cilkrts_get_worker_number()].val += xcoefs[i] * xcoefs[i];
+#endif
+#else
+    result_reducer += xcoefs[i] * xcoefs[i];
+#endif // SERIAL
+#endif // USE_REDUCERS
+  }
+#if !USE_REDUCERS
+#ifndef SERIAL
+  for (int i = 0; i < num_workers; ++i) {
+    result += result_reducer[i].val;
+  }
+  delete[] result_reducer;
+#else
+  result = result_reducer;
+#endif // SERIAL
+#endif // USE_REDUCERS
+#ifdef OMPTASK
+    }
+  }
+#endif
 
 #ifdef HAVE_MPI
+#if USE_REDUCERS
 #ifdef CILKPLUS
   magnitude local_dot = result_reducer.get_value(), global_dot = 0;
 #else
   magnitude local_dot = result_reducer, global_dot = 0;
 #endif
+#else
+  magnitude local_dot = result, global_dot = 0;
+#endif // USE_REDUCERS
   MPI_Datatype mpi_dtype = TypeTraits<magnitude>::mpi_type();  
   MPI_Allreduce(&local_dot, &global_dot, 1, mpi_dtype, MPI_SUM, MPI_COMM_WORLD);
   return global_dot;
 #else
+#if USE_REDUCERS
 #ifdef CILKPLUS
   return result_reducer.get_value();
 #else
   return result_reducer;
 #endif
-#endif
+#else
+  return result;
+#endif // USE_REDUCERS
+#endif // HAVE_MPI
 }
 
 }//namespace miniFE

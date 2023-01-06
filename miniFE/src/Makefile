@@ -15,9 +15,18 @@ ifeq ($(SERIAL),1)
 	CILKFLAG =
 else ifeq ($(CILKPLUS),1)
 	CILKPLUS_RTS=/opt/cilkrts
-	EXTRA_CFLAGS += -DCILKPLUS -I$(CILKPLUS_RTS)/include
+	EXTRA_CFLAGS += -DCILKPLUS -I$(CILKPLUS_RTS)/include -Dcilk_scope=
 	CILKFLAG ?= -fcilkplus
 	EXTRA_LDFLAGS += -L$(CILKPLUS_RTS)/lib -Wl,-rpath,$(CILKPLUS_RTS)/lib
+else ifeq ($(OPENMP),1)
+	PRESERVE_ALL_SPAWNS_FLAG = -mllvm -simplifycfg-preserve-all-spawns -mllvm -tasksimplify-preserve-all-spawns
+	EXTRA_CFLAGS += -fopenmp -ftapir=omptask -mllvm -omp-bc-path=/usr/local/src/ppopp-23-ae/extra-bitcode-abis/omp-task-rt-abi.bc -DOMPTASK $(PRESERVE_ALL_SPAWNS_FLAG)
+	CILKFLAG ?= -fopencilk
+	EXTRA_LDFLAGS += -fopenmp
+else ifeq ($(TBB),1)
+	EXTRA_CFLAGS += -ftapir=lambda -mllvm -tapir-runtime-bc-path=/usr/local/src/ppopp-23-ae/extra-bitcode-abis/tbb-bc-abi.bc -DTBB
+	CILKFLAG ?= -fopencilk
+	EXTRA_LDFLAGS += -ltbb
 else
 	CILKFLAG ?= -fopencilk
 endif

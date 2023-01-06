@@ -80,8 +80,40 @@ build:cilkplus --linkopt=-fcilkplus
 build:cilkplus --linkopt=-L/opt/cilkrts/lib
 build:cilkplus --linkopt=-Wl,-rpath,/opt/cilkrts/lib
 
+# Build using OMPTask for parallelism.
+build:omptask --cxxopt=-UHOMEGROWN
+build:omptask --cxxopt=-DCILK
+build:omptask --cxxopt=-DPARLAY_CILK
+build:omptask --cxxopt=-DPARLAY_OPENCILK
+build:omptask --cxxopt=-fopencilk
+build:omptask --cxxopt=-fopenmp
+build:omptask --cxxopt=-ftapir=omptask
+build:omptask --cxxopt=-mllvm
+build:omptask --cxxopt=-omp-bc-path=/usr/local/src/ppopp-23-ae/extra-bitcode-abis/omp-task-rt-abi.bc
+build:omptask --cxxopt=-DOMPTASK
+build:omptask --cxxopt=-mllvm
+build:omptask --cxxopt=-simplifycfg-preserve-all-spawns
+build:omptask --cxxopt=-mllvm
+build:omptask --cxxopt=-tasksimplify-preserve-all-spawns
+build:omptask --linkopt=-fopenmp
+
+# Build using TBB lambda for parallelism.
+build:tbbtask --cxxopt=-UHOMEGROWN
+build:tbbtask --cxxopt=-DCILK
+build:tbbtask --cxxopt=-DPARLAY_CILK
+build:tbbtask --cxxopt=-DPARLAY_OPENCILK
+build:tbbtask --cxxopt=-fopencilk
+build:tbbtask --cxxopt=-ftapir=lambda
+build:tbbtask --cxxopt=-mllvm
+build:tbbtask --cxxopt=-tapir-runtime-bc-path=/usr/local/src/ppopp-23-ae/extra-bitcode-abis/tbb-bc-abi.bc
+build:tbbtask --cxxopt=-DTBBTASK
+build:tbbtask --linkopt=-ltbb
+
 build:verbose --cxxopt=-v
 build:verbose --linkopt=-v
+
+build:dbgsym --cxxopt=-g
+build:dbgsym --cxxopt=-gdwarf-4
 
 # Configurations for changing random-number generation
 build:dotmix --cxxopt=-DUSE_DOTMIX

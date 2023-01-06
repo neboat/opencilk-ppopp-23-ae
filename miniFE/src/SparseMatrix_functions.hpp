@@ -45,7 +45,6 @@
 #include <mytimer.hpp>
 
 #include <cilk/cilk.h>
-// #include <cilk/reducer_opadd.h>
 
 #ifdef SERIAL
 #include <cilk/cilk_stub.h>
@@ -76,9 +75,19 @@ void init_matrix(MatrixType& M,
                                  global_nodes_x, global_nodes_y, global_nodes_z,
                                  global_nrows, mesh, M);
 
+#ifdef OMPTASK
+#pragma omp parallel
+  {
+    #pragma omp single
+    {
+#endif
   cilk_for(int i=0; i<mat_init.n; ++i) {
     mat_init(i);
   }
+#ifdef OMPTASK
+    }
+  }
+#endif
 }
 
 template<typename T,
@@ -521,12 +530,37 @@ matvec_and_dot(MatrixType& A,
   ScalarType beta = 0;
 
   //magnitude result = 0;
+#if USE_REDUCERS
 #ifdef CILKPLUS
-  cilk::reducer_opadd<ScalarType> result_reducer;
+  cilk::reducer_opadd<ScalarType> result_reducer(0);
 #else
-  cilk::opadd_reducer<ScalarType> result_reducer;
+  cilk::opadd_reducer<ScalarType> result_reducer = 0;
 #endif
+#else
+  ScalarType result = 0;
+#endif // USE_REDUCERS
 
+#ifdef OMPTASK
+#pragma omp parallel
+  {
+    #pragma omp single
+    {
+#endif
+#if !USE_REDUCERS
+#ifndef SERIAL
+#if defined(OMPTASK) || defined(TBB)
+  int num_workers = __rts_get_num_workers();
+#else
+  int num_workers = __cilkrts_get_nworkers();
+#endif
+  Scalar_TLS<ScalarType> *result_reducer = new Scalar_TLS<ScalarType>[num_workers];
+  for (int i = 0; i < num_workers; ++i) {
+    result_reducer[i].val = 0;
+  }
+#else
+  ScalarType result_reducer = 0;
+#endif // SERIAL
+#endif // !USE_REDUCERS
   cilk_for(int row=0; row<n; row++) {
     ScalarType sum = beta*ycoefs[row];
 
@@ -535,24 +569,58 @@ matvec_and_dot(MatrixType& A,
     }
 
     ycoefs[row] = sum;
+#if USE_REDUCERS
     result_reducer += xcoefs[row]*sum;
+#else
+#ifndef SERIAL
+#if defined(OMPTASK) || defined(TBB)
+    result_reducer[__rts_get_worker_id()].val += xcoefs[row]*sum;
+#else
+    result_reducer[__cilkrts_get_worker_number()].val += xcoefs[row]*sum;
+#endif
+#else
+    result_reducer += xcoefs[row]*sum;
+#endif // SERIAL
+#endif // USE_REDUCERS
   }
+#if !USE_REDUCERS
+#ifndef SERIAL
+  for (int i = 0; i < num_workers; ++i) {
+    result += result_reducer[i];
+  }
+  delete[] result_reducer;
+#else
+  result = result_reducer;
+#endif // SERIAL
+#endif // !USE_REDUCERS
+#ifdef OMPTASK
+    }
+  }
+#endif
 
 #ifdef HAVE_MPI
+#if USE_REDUCERS
 #ifdef CILKPLUS
   magnitude local_dot = result_reducer.get_value(), global_dot = 0;
 #else
   magnitude local_dot = result_reducer, global_dot = 0;
 #endif
+#else
+  magnitude local_dot = result, global_dot = 0;
+#endif // USE_REDUCERS
   MPI_Datatype mpi_dtype = TypeTraits<magnitude>::mpi_type();  
   MPI_Allreduce(&local_dot, &global_dot, 1, mpi_dtype, MPI_SUM, MPI_COMM_WORLD);
   return global_dot;
 #else
+#if USE_REDUCERS
 #ifdef CILKPLUS
   return result_reducer.get_value();
 #else
   return result_reducer;
 #endif // CILKPLUS
+#else
+  return result;
+#endif // USE_REDUCERS
 #endif
 }
 
@@ -584,6 +652,12 @@ void operator()(MatrixType& A,
         ScalarType* ycoefs = &y.coefs[0];
   ScalarType beta = 0;
 
+#ifdef OMPTASK
+#pragma omp parallel
+  {
+    #pragma omp single
+    {
+#endif
   cilk_for(int row=0; row<n; row++) {
     	ScalarType sum = 0;
 
@@ -601,6 +675,10 @@ void operator()(MatrixType& A,
 
     	ycoefs[row] = sum;
   }
+#ifdef OMPTASK
+    }
+  }
+#endif
 }
 };
 
@@ -636,6 +714,12 @@ void operator()(MatrixType& A,
         ScalarType* ycoefs = &y.coefs[0];
   ScalarType beta = 0;
 
+#ifdef OMPTASK
+#pragma omp parallel
+  {
+    #pragma omp single
+    {
+#endif
   cilk_for(int row=0; row<n; row++) {
     ScalarType sum = beta*ycoefs[row];
 
@@ -645,6 +729,10 @@ void operator()(MatrixType& A,
 
     ycoefs[row] = sum;
   }
+#ifdef OMPTASK
+    }
+  }
+#endif
 
 #ifdef HAVE_MPI
   finish_exchange_externals(A.neighbors.size());
@@ -652,6 +740,12 @@ void operator()(MatrixType& A,
   Arowoffsets = &A.row_offsets_external[0];
   beta = 1;
 
+#ifdef OMPTASK
+#pragma omp parallel
+  {
+    #pragma omp single
+    {
+#endif
   cilk_for(int row = 0; row < n; row++) {
     ScalarType sum = beta*ycoefs[row];
 
@@ -661,6 +755,10 @@ void operator()(MatrixType& A,
 
     ycoefs[row] = sum;
   }
+#ifdef OMPTASK
+    }
+  }
+#endif
 #endif
 }
 };
