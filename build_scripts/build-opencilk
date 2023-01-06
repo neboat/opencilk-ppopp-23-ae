@@ -70,7 +70,7 @@ cmake -DCMAKE_BUILD_TYPE=Release \
       -DCMAKE_CXX_COMPILER=clang++ \
       -DLLVM_ENABLE_LLD=On \
       -DLLVM_TARGETS_TO_BUILD=host \
-      -DLLVM_ENABLE_PROJECTS="clang;compiler-rt" \
+      -DLLVM_ENABLE_PROJECTS="clang;compiler-rt;openmp" \
       -DLLVM_ENABLE_RUNTIMES="cheetah;cilktools" \
       -DCMAKE_INSTALL_PREFIX="/opt/opencilk" \
       "${OPENCILK_SOURCE}/llvm"

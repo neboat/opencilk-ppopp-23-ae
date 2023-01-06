@@ -1,0 +1,10 @@
+#!/bin/sh
+
+# Enter the bitcode-abis subdirectory
+cd /usr/local/src/ppopp-23-ae/extra-bitcode-abis
+
+# Build the OpenMP runtime bitcode-ABI
+/opt/opencilk/bin/clang -c omp-task-rt-abi.c -fopenmp -g -gdwarf-4 -O3 -emit-llvm
+
+# Build the oneTBB runtime bitcode-ABI
+/opt/opencilk/bin/clang++ -c tbb-bc-abi.cpp -g -gdwarf-4 -O3 -emit-llvm

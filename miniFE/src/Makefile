@@ -26,7 +26,7 @@ else ifeq ($(OPENMP),1)
 else ifeq ($(TBB),1)
 	EXTRA_CFLAGS += -ftapir=lambda -mllvm -tapir-runtime-bc-path=/usr/local/src/ppopp-23-ae/extra-bitcode-abis/tbb-bc-abi.bc -DTBB
 	CILKFLAG ?= -fopencilk
-	EXTRA_LDFLAGS += -ltbb
+	EXTRA_LDFLAGS += -ltbb -L/usr/local/lib -Wl,-rpath,/usr/local/lib
 else
 	CILKFLAG ?= -fopencilk
 endif

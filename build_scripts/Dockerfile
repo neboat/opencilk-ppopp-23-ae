@@ -42,9 +42,15 @@ RUN echo "Installing packages..." \
   && echo "Building CilkRTS..." \
   && /usr/local/src/ppopp-23-ae/build_scripts/build-cilkrts /usr/local/src/ppopp-23-ae/cilkrts \
     /usr/local/src/ppopp-23-ae/cilkrts/build \
+  && echo "Building TBB..." \
+  && /usr/local/src/ppopp-23-ae/build_scripts/build-tbb /usr/local/src/ppopp-23-ae/oneTBB \
+    /usr/local/src/ppopp-23-ae/oneTBB/build \
+  && echo "Building bitcode ABIs..." \
+  && /usr/local/src/ppopp-23-ae/build_scripts/build-bitcode-abis \
   && echo "Cleaning temporary files..." \
   && rm -rf /usr/local/src/opencilk.tar.gz \
   && rm -rf /usr/local/src/opencilk/build \
   && rm -rf /usr/local/src/ppopp-23-ae/cilkrts/build \
+  && rm -rf /usr/local/src/ppopp-23-ae/oneTBB/build \
   && rm -rf /var/lib/apt/lists/* \
   && echo "DOCKER IMAGE BUILT"

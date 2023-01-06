@@ -108,6 +108,8 @@ build:tbbtask --cxxopt=-mllvm
 build:tbbtask --cxxopt=-tapir-runtime-bc-path=/usr/local/src/ppopp-23-ae/extra-bitcode-abis/tbb-bc-abi.bc
 build:tbbtask --cxxopt=-DTBBTASK
 build:tbbtask --linkopt=-ltbb
+build:tbbtask --linkopt=-L/usr/local/lib
+build:tbbtask --linkopt=-Wl,-rpath,/usr/local/lib
 
 build:verbose --cxxopt=-v
 build:verbose --linkopt=-v

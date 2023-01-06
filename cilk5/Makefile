@@ -29,7 +29,7 @@ else ifeq ($(OPENMP),1)
 else ifeq ($(TBB),1)
 	CFLAGS += -fopencilk -ftapir=lambda -mllvm -tapir-runtime-bc-path=/usr/local/src/ppopp-23-ae/extra-bitcode-abis/tbb-bc-abi.bc
 	CXXFLAGS += -fopencilk -ftapir=lambda -mllvm -tapir-runtime-bc-path=/usr/local/src/ppopp-23-ae/extra-bitcode-abis/tbb-bc-abi.bc
-	LDFLAGS = -ltbb -lstdc++
+	LDFLAGS = -ltbb -lstdc++ -L/usr/local/lib -Wl,-rpath,/usr/local/lib
 else
 	CILKFLAG ?= -fopencilk
 endif
