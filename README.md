@@ -1,18 +1,11 @@
 # Introduction
 
 This document describes how to evaluate the artifact for the PPoPP
-2023 paper submission, "NAC: A Modular and Extensible Software
+2023 paper, "OpenCilk: A Modular and Extensible Software
 Infrastructure for Fast Task-Parallel Code."  This evaluation supports
 assessment of the functionality and reusability of the artifact and
 validation of the results of the empirical evaluation, in Section 4
 of the paper.
-
-Throughout this document and the artifact, the paper's anonymized
-names for the system and its components have been deanonymized.
-- The name of the system, "NAC," has been deanonymized to
-  "OpenCilk."
-- The name for the scalability analyzer, "NAC SA," has been
-  deanonymized to "Cilkscale."
 
 This artifact consists of a Docker image containing precompiled
 binaries for OpenCilk as well as source code for all
@@ -28,10 +21,6 @@ compiler, runtime system, and productivity tools, is archived here:
 <https://doi.org/10.5281/zenodo.7336106>.
 For reference, a copy of the source code can also be found at
 `/usr/local/src/opencilk` within the Docker image.
-
-For convenience, this README file is also available online,
-with the Markdown rendered, at
-<https://github.com/neboat/opencilk-ppopp-23-ae/blob/main/README.md>.
 
 # Getting started guide
 
@@ -49,22 +38,22 @@ instructions on how to install the latest version of Docker at
 [here](https://docs.docker.com/engine/install/ubuntu/) are the
 instructions to install Docker on Ubuntu.
 
-1. Download the Docker image (2.4GB) from <https://people.csail.mit.edu/neboat/opencilk-ppopp-23-ae/docker-opencilk-ppopp-23-ae.tar.gz>:
+1. Download the Docker image (2.4GB) from <https://people.csail.mit.edu/neboat/opencilk-ppopp-23/docker-opencilk-ppopp-23.tar.gz>:
 
 ```console
-wget https://people.csail.mit.edu/neboat/opencilk-ppopp-23-ae/docker-opencilk-ppopp-23-ae.tar.gz
+wget https://people.csail.mit.edu/neboat/opencilk-ppopp-23/docker-opencilk-ppopp-23.tar.gz
 ```
 
 2. Load the Docker image:
 
 ```console
-docker load -i docker-opencilk-ppopp-23-ae.tar.gz
+docker load -i docker-opencilk-ppopp-23.tar.gz
 ```
 
 3. Run the Docker image:
 
 ```console
-docker run -it opencilk-ppopp-23-ae /bin/bash
+docker run -it opencilk-ppopp-23 /bin/bash
 ```
 
 4. Enter the test directory inside the Docker container:
@@ -105,16 +94,16 @@ times presented in the paper --- due to differences in computer
 hardware and system configuration --- you can use this artifact to 
 replicate the following results:
 - *OpenCilk functionality:* OpenCilk supports compiling and running a
-  variety of Cilk programs using either the Cilk Plus or OpenCilk 
-  runtime systems.  OpenCilk also supports the use of tools, such as
-  the Cilkscale scalability analyzer, to analyze task-parallel program
-  execution.
+  variety of Cilk programs using either the OpenMP, oneTBB, Cilk Plus
+  or OpenCilk runtime systems.  OpenCilk also supports the use of tools,
+  such as the Cilkscale scalability analyzer, to analyze task-parallel
+  program execution.
 - *Figure 3 performance trend:* Across the non-randomized benchmarks,
   the baseline performance of OpenCilk --- without pedigree and DPRNG
   support enabled and without any tool, such as Cilkscale, enabled ---
-  is typically equal to or faster than that of Cilk Plus.  In particular,
-  the parallel running times of these benchmarks is often better when
-  using OpenCik, compared to Cilk Plus.
+  is typically equal to or faster than that of Cilk Plus, OpenMP, and 
+  oneTBB.  In particular, the parallel running times of these benchmarks
+  is often better when using OpenCik.
 - *Figure 4 performance trend:* Across the non-randomized benchmarks,
   OpenCik runs efficiently with pedigree and DPRNG support enabled,
   generally incurring low overheads compared to the OpenCilk's
@@ -233,7 +222,7 @@ There are several ways to run the application tests more quickly.
   running the executables with too few trials, as doing so will
   increase the variability of the aggregated results.
 
-## Getting the CSV files with aggreagted results
+## Getting the CSV files with aggregated results
 
 When the `run_tests.py` script is run to perform all experiments, it 
 will generate four CSV files containing aggregated performance results
