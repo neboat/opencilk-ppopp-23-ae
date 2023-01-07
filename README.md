@@ -4,8 +4,8 @@ This document describes how to evaluate the artifact for the PPoPP
 2023 paper, "OpenCilk: A Modular and Extensible Software
 Infrastructure for Fast Task-Parallel Code."  This evaluation supports
 assessment of the functionality and reusability of the artifact and
-validation of the results of the empirical evaluation, in Section 4
-of the paper.
+validation of the results of the empirical evaluation, in Sections 3 
+and 4 of the paper.
 
 This artifact consists of a Docker image containing precompiled
 binaries for OpenCilk as well as source code for all
@@ -18,7 +18,7 @@ processors.
 
 The OpenCilk source code for this artifact, including its LLVM-based
 compiler, runtime system, and productivity tools, is archived here:
-<https://doi.org/10.5281/zenodo.7336106>.
+<https://doi.org/10.5281/zenodo.7510908>.
 For reference, a copy of the source code can also be found at
 `/usr/local/src/opencilk` within the Docker image.
 
@@ -87,8 +87,8 @@ Tests completed in 286.733336 seconds.  Run tag: small-20221118-0408.
 
 These instructions will guide you through using the Docker image to 
 evaluate the artifact by rerunning the experiments for the empirical 
-evaluation of the paper (Section 4).  In particular, these steps will
-produce four CSV files that are analogous to Figures 3-6 in Section 4.
+evaluation of the paper (Sections 3 and 4).  In particular, these steps will
+produce four CSV files that are analogous to Figures 4, 7, 8, and 9.
 Although we cannot guarantee that you can exactly replicate the running
 times presented in the paper --- due to differences in computer
 hardware and system configuration --- you can use this artifact to 
@@ -260,19 +260,19 @@ The generated CSV files correspond with the empirical evaluation
 in the paper as follows:
 - The `baseline-<tag>.csv` file contains running-time results for
   the baseline performance of the different systems.  These
-  results correspond with Figure 3 in the paper.
+  results correspond with Figure 7 in the paper.
 - The `pedigrees-<tag>.csv` file contains running-time results for
   the performance of OpenCilk on the non-randomized benchmarks
   when pedigree and DPRNG support is enabled.  These results
-  correspond with Figure 4 in the paper.
+  correspond with Figure 8 in the paper.
 - The `dprng-<tag>.csv` file contains running-time results for
   the performance of OpenCilk and Cilk Plus on randomized
   benchmarks using different DPRNGs.  These results correspond
-  with Figure 5 in the paper.
+  with Figure 9 in the paper.
 - The `cilkscale-compare-<tag>.csv` file contains running-time
   results on the non-randomized benchmarks of OpenCilk run with
   either the library-based or bitcode-ABI-based Cilkscale tool.
-  These results correspond with Figure 6 in the paper.
+  These results correspond with Figure 4 in the paper.
 
 In these CSV files, rows identify different programs, and columns
 generally identify a system (e.g., Cilk Plus or OpenCilk) and
